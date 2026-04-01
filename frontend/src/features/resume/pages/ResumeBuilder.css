@@ -1,0 +1,211 @@
+/* =============================================
+   ResumeBuilder.css
+   Styles for the Resume Builder page
+   ============================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&family=Playfair+Display:wght@400;700&display=swap");
+
+/* ---- Page wrapper ---- */
+.rb-page {
+  min-height: 100vh;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  font-family: "Inter", sans-serif;
+}
+
+/* ---- Header ---- */
+.rb-header {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+}
+
+.rb-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.rb-back-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: background 0.15s, color 0.15s;
+}
+.rb-back-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.rb-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rb-brand-icon {
+  font-size: 1.1rem;
+  color: #7c3aed;
+}
+.rb-brand-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.rb-header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.rb-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.rb-download-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+.rb-download-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* ---- Main Two-Column ---- */
+.rb-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 32px;
+  box-sizing: border-box;
+}
+
+/* ---- Left column (scrollable) ---- */
+.rb-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  max-height: calc(100vh - 80px);
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
+}
+.rb-left-col::-webkit-scrollbar {
+  width: 6px;
+}
+.rb-left-col::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 99px;
+}
+
+.rb-left-intro {
+  margin-bottom: 4px;
+}
+.rb-left-intro h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+.rb-left-intro p {
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.rb-bottom-spacer {
+  height: 60px;
+}
+
+/* ---- Right column (sticky preview) ---- */
+.rb-right-col {
+  position: sticky;
+  top: 80px;
+  height: calc(100vh - 104px);
+  overflow-y: auto;
+  padding: 16px;
+  background: #f1f5f9;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+/* ---- Print styles — only show resume ---- */
+@media print {
+  .rb-header,
+  .rb-left-col,
+  .rb-back-btn,
+  .rb-download-btn {
+    display: none !important;
+  }
+
+  .rb-page,
+  .rb-main,
+  .rb-right-col {
+    all: unset;
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+  }
+
+  .print:hidden {
+    display: none !important;
+  }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 1024px) {
+  .rb-main {
+    grid-template-columns: 1fr;
+    padding: 20px 20px;
+  }
+
+  .rb-right-col {
+    display: none;
+  }
+
+  .rb-left-col {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .rb-header-center {
+    display: none;
+  }
+}

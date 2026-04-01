@@ -1,0 +1,73 @@
+/* MAIN 3 COLUMN GRID */
+
+.interview-layout {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: 220px 1fr 220px;
+  gap: 25px;
+}
+
+
+/* LEFT SIDEBAR */
+
+.interview-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+
+/* NAV BUTTONS */
+
+.nav-btn {
+  background: transparent;
+  border: 1px solid #334155;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nav-btn:hover {
+  background: #020617;
+}
+
+.nav-btn.active {
+  border-color: #ff2f92;
+  color: #ff2f92;
+}
+
+
+/* MAIN CONTENT */
+
+.interview-main {
+  min-height: 400px;
+}
+
+
+/* RIGHT PANEL */
+
+.interview-right {
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* SKILL TAGS */
+
+.skill-tags {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tag {
+  border: 1px solid #334155;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #9ca3af;
+  background: #020617;
+}
