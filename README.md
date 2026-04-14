@@ -43,8 +43,8 @@ Make sure you have [Node.js](https://nodejs.org/) installed along with a MongoDB
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/karan686-jpg/CV_generator.git
-cd CV_generator
+git clone https://github.com/karan686-jpg/AI-Resume-Builder-Analyzer.git
+cd AI-Resume-Builder-Analyzer
 ```
 
 ### 2. Backend Setup
