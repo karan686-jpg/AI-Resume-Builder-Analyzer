@@ -1,8 +1,4 @@
-const { GoogleGenAI } = require("@google/genai");
-
-const genAI = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY
-});
+const { generateContentWithRetryAndFallback } = require("../services/ai.service");
 
 // Endpoint: /api/ai/enhance-summary
 const enhanceSummary = async (req, res) => {
@@ -23,8 +19,7 @@ const enhanceSummary = async (req, res) => {
       Return ONLY the final 2-sentence summary without any extra conversational text.
     `;
 
-    const response = await genAI.models.generateContent({
-      model: "gemini-2.0-flash",
+    const response = await generateContentWithRetryAndFallback({
       contents: prompt
     });
 
@@ -34,9 +29,9 @@ const enhanceSummary = async (req, res) => {
   } catch (error) {
     console.error("Enhance Summary Error:", error);
     if (error.status === 429) {
-      return res.status(429).json({ error: "Gemini API Rate limit exceeded. Please try again later." });
+      return res.status(429).json({ error: "Gemini API Rate limit exceeded. Please try again in a moment." });
     }
-    res.status(500).json({ error: "Failed to enhance summary." });
+    res.status(500).json({ error: "Failed to enhance summary. Please try again." });
   }
 };
 
@@ -62,8 +57,7 @@ const enhanceExperience = async (req, res) => {
       Return ONLY the bullet points (use standard bullet characters or markdown hyphens). Do not include extra conversational text.
     `;
 
-    const response = await genAI.models.generateContent({
-      model: "gemini-2.0-flash",
+    const response = await generateContentWithRetryAndFallback({
       contents: prompt
     });
 
@@ -73,9 +67,9 @@ const enhanceExperience = async (req, res) => {
   } catch (error) {
     console.error("Enhance Experience Error:", error);
     if (error.status === 429) {
-      return res.status(429).json({ error: "Gemini API Rate limit exceeded. Please try again later." });
+      return res.status(429).json({ error: "Gemini API Rate limit exceeded. Please try again in a moment." });
     }
-    res.status(500).json({ error: "Failed to enhance experience." });
+    res.status(500).json({ error: "Failed to enhance experience. Please try again." });
   }
 };
 

@@ -20,48 +20,53 @@ const ModernTemplate = ({ data }) => {
     >
       {/* Header Banner */}
       <div
-        className="px-10 py-8 text-white flex flex-col md:flex-row md:items-center md:justify-between"
+        className="px-8 py-6 text-white flex items-center justify-between min-h-[100px]"
         style={{ backgroundColor: themeColor || "#2563EB" }}
       >
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center gap-5">
           {personalInfo?.imageUrl && (
             <img
               src={personalInfo.imageUrl}
               alt="Profile"
-              className="w-20 h-20 rounded-full border-2 border-white object-cover shadow-sm"
+              className="w-16 h-16 rounded-full border-2 border-white/90 object-cover shadow-sm shrink-0"
             />
           )}
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight text-white m-0 leading-tight">
               {personalInfo?.name || "Your Name"}
             </h1>
+            {personalInfo?.title && (
+              <p className="text-xs text-white/85 font-medium mt-1">
+                {personalInfo.title}
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="mt-4 md:mt-0 flex flex-col space-y-2 text-sm text-white/90 text-right">
+        <div className="flex flex-col space-y-1.5 text-xs text-white/90 text-right shrink-0">
           {personalInfo?.email && (
-            <span className="flex items-center justify-end">
-              {personalInfo.email} <Mail size={14} className="ml-2" />
+            <span className="flex items-center justify-end gap-1.5">
+              {personalInfo.email} <Mail size={12} />
             </span>
           )}
           {personalInfo?.phone && (
-            <span className="flex items-center justify-end">
-              {personalInfo.phone} <Phone size={14} className="ml-2" />
+            <span className="flex items-center justify-end gap-1.5">
+              {personalInfo.phone} <Phone size={12} />
             </span>
           )}
           {personalInfo?.linkedIn && (
-            <span className="flex items-center justify-end">
-              {personalInfo.linkedIn} <Linkedin size={14} className="ml-2" />
+            <span className="flex items-center justify-end gap-1.5">
+              {personalInfo.linkedIn} <Linkedin size={12} />
             </span>
           )}
           {personalInfo?.github && (
-            <span className="flex items-center justify-end">
-              {personalInfo.github} <Github size={14} className="ml-2" />
+            <span className="flex items-center justify-end gap-1.5">
+              {personalInfo.github} <Github size={12} />
             </span>
           )}
           {personalInfo?.portfolio && (
-            <span className="flex items-center justify-end">
-              {personalInfo.portfolio} <Globe size={14} className="ml-2" />
+            <span className="flex items-center justify-end gap-1.5">
+              {personalInfo.portfolio} <Globe size={12} />
             </span>
           )}
         </div>

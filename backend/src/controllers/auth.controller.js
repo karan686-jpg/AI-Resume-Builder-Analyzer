@@ -31,9 +31,17 @@ const registerController = async (req, res) => {
         });
 
         // Send token in a cookie
-        res.cookie("token", token, { httpOnly: true });
+        res.cookie("token", token, { 
+            httpOnly: true,
+            sameSite: "lax",
+            secure: process.env.NODE_ENV === "production"
+        });
 
-        return res.status(201).json({ message: "User registered successfully", user: { username: newUser.username, email: newUser.email } });
+        return res.status(201).json({ 
+            message: "User registered successfully", 
+            user: { id: newUser._id, username: newUser.username, email: newUser.email },
+            token 
+        });
 
     } catch (error) {
         return res.status(500).json({ message: "Something went wrong", error: error.message });
@@ -64,9 +72,17 @@ const loginUserConroller = async (req, res) => {
         });
 
         // Send token in a cookie
-        res.cookie("token", token, { httpOnly: true });
+        res.cookie("token", token, { 
+            httpOnly: true,
+            sameSite: "lax",
+            secure: process.env.NODE_ENV === "production"
+        });
 
-        return res.status(200).json({ message: "Login successful", user: { username: user.username, email: user.email } });
+        return res.status(200).json({ 
+            message: "Login successful", 
+            user: { id: user._id, username: user.username, email: user.email },
+            token 
+        });
 
     } catch (error) {
         return res.status(500).json({ message: "Something went wrong", error: error.message });

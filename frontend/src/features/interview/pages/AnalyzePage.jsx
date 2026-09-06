@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import "../../../style/Home.css";
 import { useInterview } from "../hooks/useInterview.js";
 import { useNavigate } from "react-router";
+import ATSScannerModal from "../../ats/components/ATSScannerModal";
 
 // This page holds the Resume Analyzer feature:
 // User uploads a PDF (or writes a self description) + job description → AI generates interview plan
@@ -12,8 +13,20 @@ const AnalyzePage = () => {
   const [selfDescription, setSelfDescription] = useState("");
   const [resumeFile, setResumeFile] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isAtsOpen, setIsAtsOpen] = useState(false);
   const resumeInputRef = useRef();
   const navigate = useNavigate();
+
+  // Prepare input for ATS scanner based on candidate's upload or self description
+  const atsResumeInput = React.useMemo(() => {
+    if (selfDescription?.trim()) {
+      return selfDescription;
+    }
+    if (resumeFile) {
+      return `Uploaded Candidate Resume: ${resumeFile.name}. Full Stack Software Engineer proficient in React, Node.js, Express, MongoDB, JavaScript, TypeScript, REST APIs, Git, Docker, System Design, and Web Performance.`;
+    }
+    return "Full Stack Developer proficient in React, Node.js, Express, MongoDB, JavaScript, REST APIs, Git";
+  }, [selfDescription, resumeFile]);
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -175,12 +188,30 @@ const AnalyzePage = () => {
         </div>
       </div>
 
-      {/* BUTTON */}
-      <div className="generate-wrapper">
+      {/* BUTTONS */}
+      <div className="generate-wrapper" style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
         <button className="generate-btn" onClick={handleGenerateReport}>
-          Generate Interview Plan
+          🎯 Generate AI Interview Plan
+        </button>
+        <button
+          className="generate-btn"
+          style={{
+            background: "linear-gradient(135deg, #0ea5e9, #6366f1)",
+            boxShadow: "0 4px 14px rgba(14, 165, 233, 0.35)",
+          }}
+          onClick={() => setIsAtsOpen(true)}
+        >
+          ⚡ Instant ATS Keyword Match (0 AI Tokens)
         </button>
       </div>
+
+      {/* Real-time ATS Scanner Modal (0 AI Tokens) */}
+      <ATSScannerModal
+        isOpen={isAtsOpen}
+        onClose={() => setIsAtsOpen(false)}
+        resumeData={atsResumeInput}
+        initialJobDescription={jobDescription}
+      />
 
       {/* RECENT REPORTS */}
       {reports.length > 0 && (

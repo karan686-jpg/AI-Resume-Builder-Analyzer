@@ -8,13 +8,13 @@ import ProfessionalTemplate from "./templates/ProfessionalTemplate";
 import CorporateTemplate from "./templates/CorporateTemplate";
 import SimpleTemplate from "./templates/SimpleTemplate";
 import ElegantTemplate from "./templates/ElegantTemplate";
-import { Download, Share2, Check } from "lucide-react";
-import html2pdf from "html2pdf.js";
+import { Download, Share2, Check, Printer } from "lucide-react";
 
 /**
- * ResumePreview — receives template as a prop from ResumeBuilder (parent controls it)
+ * ResumePreview — receives template as a prop from ResumeBuilder
  */
-const ResumePreviewWrapper = ({ data, template }) => {
+const ResumePreviewWrapper = ({ data, template, designValues = {} }) => {
+
   const [copied, setCopied] = useState(false);
   const containerRef = useRef(null);
   const printRef = useRef(null);
@@ -24,10 +24,8 @@ const ResumePreviewWrapper = ({ data, template }) => {
   useEffect(() => {
     const updateScale = () => {
       if (containerRef.current) {
-        // The preview container width
         const containerWidth = containerRef.current.offsetWidth;
-        // A4 width in pixels (794px) plus some padding to look nice
-        const targetWidth = 794 + 64;
+        const targetWidth = 794 + 48;
 
         if (containerWidth < targetWidth) {
           setScale(containerWidth / targetWidth);
@@ -43,23 +41,16 @@ const ResumePreviewWrapper = ({ data, template }) => {
   }, []);
 
   const handleDownloadPdf = () => {
-    const element =
-      document.getElementById("hidden-resume-pdf-content") ||
-      document.getElementById("resume-pdf-content");
-    const opt = {
-      margin: 0,
-      filename: "resume.pdf",
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
-    };
-    html2pdf().set(opt).from(element).save();
+    window.print();
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const handleShare = async () => {
     try {
-      const url = `${window.location.origin}/view/${data.userId || "shared"}`;
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -94,35 +85,38 @@ const ResumePreviewWrapper = ({ data, template }) => {
   return (
     <div className="flex flex-col h-full w-full overflow-hidden relative print:overflow-visible">
       {/* Top bar */}
-      <div className="bg-white border text-black border-gray-200 rounded-xl p-4 mb-4 flex justify-between items-center shadow-sm shrink-0 print:hidden">
-        <div className="flex items-center space-x-2">
-          <span className="text-sm font-semibold text-gray-700">
+      <div className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 mb-3 flex items-center justify-between shadow-xs shrink-0 print:hidden gap-3">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
             Live Preview
           </span>
-          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-            ● Live
+          <span className="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Real-time
           </span>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleShare}
-            className="flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+            className="flex items-center px-2.5 py-1 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Copy shareable link"
           >
             {copied ? (
-              <Check size={16} className="text-green-600 mr-2" />
+              <Check size={13} className="text-emerald-600 mr-1" />
             ) : (
-              <Share2 size={16} className="text-blue-500 mr-2" />
+              <Share2 size={13} className="text-blue-500 mr-1" />
             )}
-            {copied ? "Copied!" : "Share Link"}
+            <span>{copied ? "Copied!" : "Share"}</span>
           </button>
 
           <button
-            onClick={handleDownloadPdf}
-            className="flex items-center px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            onClick={handlePrint}
+            className="flex items-center px-3 py-1 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-all shadow-xs cursor-pointer"
+            title="Pixel-perfect vector print or save as PDF"
           >
-            <Download size={16} className="mr-2" />
-            Download PDF
+            <Printer size={13} className="mr-1.5" />
+            <span>Print / PDF</span>
           </button>
         </div>
       </div>
@@ -130,47 +124,33 @@ const ResumePreviewWrapper = ({ data, template }) => {
       {/* A4 Resume paper container */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto custom-scrollbar flex justify-center items-start pt-4 bg-gray-100/50 rounded-lg print:bg-transparent print:pt-0 print:overflow-visible"
+        className="flex-1 overflow-auto custom-scrollbar flex justify-center items-start pt-2 bg-slate-100/70 rounded-xl p-4 print:bg-transparent print:pt-0 print:overflow-visible"
       >
         <div
           style={{
             transform: `scale(${scale})`,
             transformOrigin: "top center",
             height: scale < 1 ? 1123 * scale : "auto",
-            marginBottom: scale < 1 ? 40 : 40, // Add bottom padding for scroll
+            marginBottom: scale < 1 ? 40 : 40,
           }}
           className="transition-transform duration-200 ease-out print:transform-none! print:h-auto! print:m-0! print:w-full!"
         >
           <div
             id="resume-pdf-content"
             ref={printRef}
-            className="bg-white shadow-xl shrink-0 overflow-hidden print:shadow-none print:w-full"
+            className="bg-white shadow-2xl rounded-sm shrink-0 overflow-hidden print:shadow-none print:w-full"
             style={{
               width: "794px",
               minHeight: "1123px",
               fontFamily: data.fontFamily || undefined,
+              fontSize: designValues.fontSize ? `${designValues.fontSize}pt` : undefined,
+              lineHeight: designValues.lineHeight ? (1 + (designValues.lineHeight - 1) * 0.1).toFixed(2) : undefined,
+              padding: designValues.pageMargin ? `${designValues.pageMargin * 8}px` : undefined,
+              ...(designValues.bgStyle || {}),
             }}
           >
             {renderTemplate()}
           </div>
-        </div>
-      </div>
-
-      {/* Hidden Unscaled Copy strictly for PDF generator */}
-      <div
-        style={{ position: "absolute", top: "-9999px", left: "-9999px" }}
-        className="print:hidden"
-      >
-        <div
-          id="hidden-resume-pdf-content"
-          className="bg-white shrink-0 overflow-hidden"
-          style={{
-            width: "794px",
-            minHeight: "1123px",
-            fontFamily: data.fontFamily || undefined,
-          }}
-        >
-          {renderTemplate()}
         </div>
       </div>
     </div>

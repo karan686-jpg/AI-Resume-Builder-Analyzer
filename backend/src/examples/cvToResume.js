@@ -20,7 +20,7 @@
  * You can map this output directly when creating a new Resume document:
  */
 
-const Resume = require("./models/resume.model");
+const Resume = require("../models/resume.model");
 
 async function createResumeFromCV(userId, parsedCV) {
   try {

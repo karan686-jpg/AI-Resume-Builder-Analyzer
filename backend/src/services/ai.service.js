@@ -1,47 +1,128 @@
-const {GoogleGenAI} =require("@google/genai");
+const { GoogleGenAI } = require("@google/genai");
 
 const genAI = new GoogleGenAI({
-    apiKey:process.env.GOOGLE_GENAI_API_KEY
+  apiKey: process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY,
 });
-const {z} =require("zod");
-const {zodToJsonSchema} =require("zod-to-json-schema");
+const interviewReportJsonSchema = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    matchScore: { type: "integer" },
+    technicalQuestions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          question: { type: "string" },
+          intention: { type: "string" },
+          answer: { type: "string" }
+        },
+        required: ["question", "intention", "answer"]
+      }
+    },
+    behavioralQuestions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          question: { type: "string" },
+          intention: { type: "string" },
+          answer: { type: "string" }
+        },
+        required: ["question", "intention", "answer"]
+      }
+    },
+    skillGaps: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          skillName: { type: "string" },
+          severity: { type: "string", enum: ["low", "medium", "high"] },
+          description: { type: "string" }
+        },
+        required: ["skillName", "severity", "description"]
+      }
+    },
+    preparationPlan: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          day: { type: "integer" },
+          title: { type: "string" },
+          focus: { type: "string" },
+          tasks: { type: "array", items: { type: "string" } }
+        },
+        required: ["day", "title", "focus", "tasks"]
+      }
+    }
+  },
+  required: [
+    "title",
+    "matchScore",
+    "technicalQuestions",
+    "behavioralQuestions",
+    "skillGaps",
+    "preparationPlan"
+  ]
+};
 
-const interviewReportSchema = z.object({
-    matchScore: z.number().min(0).max(100).describe("The percentage match between the candidate's resume and the job requirements"),
-    technicalQuestions: z.array(
-        z.object({
-            question: z.string().describe("The technical question"),
-            intention: z.string().describe("The intention behind asking the question"),
-            answer: z.string().describe(" How to answer the question, What points to cover ,what is the approach"),
-            title: z.string().describe(" The title of the day in the preparation strategy"),
-        })
-    ),
-    behavioralQuestions: z.array(
-        z.object({
-            question: z.string().describe("The behavioral question"),
-            intention: z.string().describe("The intention behind asking the question"),
-            answer: z.string().describe(" How to answer the question, What points to cover ,what is the approach")
-        }).describe("Behavioral questions")
-    ),
-    skillGaps: z.array(
-        z.object({
-            skillName: z.string().describe("The skill name"),
-            severity: z.enum(["low", "medium", "high"]).describe("The severity of the skill gap"),
-            description: z.string().describe("The description of the skill gap")
-        })
-    ),
-    preparationPlan: z.array(
-        z.object({
-            day: z.number().describe(" The day number in the preparation plan starting from 1"),
-            focus: z.string().describe(" The main focus of the day in the preparation strategy"),
-            tasks: z.array(z.string()).describe(" The tasks to be completed on the day"),
-            title: z.string().describe(" The title of the day in the preparation strategy"),
-        })
-    )
-});
+const FALLBACK_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash"
+];
 
-async function generateInterviewReport({ jobDescription, resume, selfDescription }) {
-    const prompt = `
+/**
+ * Executes a Gemini generation request with model cascading and exponential backoff retry
+ * on HTTP 429 (Rate Limit) and 503 (Overloaded) errors.
+ */
+async function generateContentWithRetryAndFallback(options, maxRetries = 2) {
+  let lastError = null;
+
+  for (const model of FALLBACK_MODELS) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await genAI.models.generateContent({
+          ...options,
+          model,
+        });
+        return response;
+      } catch (error) {
+        lastError = error;
+        const isRateLimit = error.status === 429 || error.message?.includes("429");
+        const isOverloaded = error.status === 503 || error.message?.includes("503");
+        const isModelNotFound = error.status === 404 || error.message?.includes("not found");
+
+        if (isModelNotFound) {
+          // Immediately cascade to next candidate model
+          console.warn(`[GenAI] Model ${model} not found or unsupported. Falling back to next available model...`);
+          break;
+        }
+
+        if ((isRateLimit || isOverloaded) && attempt < maxRetries) {
+          const waitMs = 1200 * attempt;
+          console.warn(`[GenAI] ${model} hit status ${error.status || 'busy'}. Retrying attempt ${attempt}/${maxRetries} after ${waitMs}ms...`);
+          await new Promise((res) => setTimeout(res, waitMs));
+          continue;
+        }
+
+        // On other errors or exhausted retries, break to next model
+        break;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+async function generateInterviewReport({
+  jobDescription,
+  resume,
+  selfDescription,
+}) {
+  const prompt = `
     You are an expert career coach and technical interviewer. 
     Generate a comprehensive interview report based on the following inputs:
     
@@ -81,6 +162,7 @@ async function generateInterviewReport({ jobDescription, resume, selfDescription
     - For each gap, provide:
       - Skill name
       - Severity (low, medium, high)
+      - Description
     
     E. Preparation Plan:
     - Create a structured 7-day preparation plan.
@@ -125,35 +207,32 @@ async function generateInterviewReport({ jobDescription, resume, selfDescription
     }
     `;
 
-    
-    const response = await genAI.models.generateContent({
-          model:"gemini-2.0-flash",
-          contents: prompt,
-        config:{
-            responseMimeType:"application/json"
-        }
-        });
-        let result = response.text;
-        
-        // Sometimes the AI wraps the JSON in markdown code blocks
-        // Extract the content between the backticks if present
-        const jsonMatch = result.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-        if (jsonMatch) {
-            result = jsonMatch[1];
-        }
-        
-        try {
-            return JSON.parse(result);
-        } catch (err) {
-            console.error("AI JSON Parse Error:", err);
-            // Throw a specific error we can catch in the controller
-            const error = new Error("Failed to parse AI response into valid JSON.");
-            error.status = 502; // Bad Gateway / Bad Response from upstream
-            throw error;
-        }
-    }
+  const response = await generateContentWithRetryAndFallback({
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: interviewReportJsonSchema,
+    },
+  });
+  let result = response.text;
 
+  // Fallback extraction if wrapped in codeblocks
+  const jsonMatch = result.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (jsonMatch) {
+    result = jsonMatch[1];
+  }
+
+  try {
+    return JSON.parse(result);
+  } catch (err) {
+    console.error("AI JSON Parse Error:", err);
+    const error = new Error("Failed to parse AI response into valid JSON.");
+    error.status = 502;
+    throw error;
+  }
+}
 
 module.exports = {
-    generateInterviewReport
-}; 
+  generateInterviewReport,
+  generateContentWithRetryAndFallback,
+};

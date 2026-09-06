@@ -10,26 +10,45 @@ const Register = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const navigate = useNavigate();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMsg("");
     try {
       await handleRegister(username, email, password);
       navigate("/");
     } catch (err) {
-      console.log("Registration failed", err);
+      console.error("Registration failed", err);
+      setErrorMsg(
+        err.response?.data?.message || 
+        err.message || 
+        "Registration failed. Please try again."
+      );
     }
   };
-
-  if (loading) {
-    return <p>Loading...</p>;
-  }
 
   return (
     <main>
       <div className="form-container">
         <h1 className="form-title">Register</h1>
+
+        {errorMsg && (
+          <div style={{
+            backgroundColor: "#fee2e2",
+            color: "#b91c1c",
+            border: "1px solid #f87171",
+            borderRadius: "6px",
+            padding: "10px 14px",
+            marginBottom: "16px",
+            fontSize: "14px"
+          }}>
+            ⚠️ {errorMsg}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div className="input-group">
             <label htmlFor="username">Username</label>
@@ -37,8 +56,9 @@ const Register = () => {
               type="text"
               id="username"
               name="username"
-              placeholder="Enter your username "
+              placeholder="Enter your username"
               value={username}
+              required
               onChange={(e) => setUsername(e.target.value)}
             />
           </div>
@@ -48,8 +68,9 @@ const Register = () => {
               type="email"
               id="email"
               name="email"
-              placeholder="Enter your email "
+              placeholder="Enter your email"
               value={email}
+              required
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
@@ -59,13 +80,14 @@ const Register = () => {
               type="password"
               id="password"
               name="password"
-              placeholder="Enter your password "
+              placeholder="Enter your password"
               value={password}
+              required
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <button onClick={handleSubmit} className="btn-primary" type="submit">
-            Register
+          <button disabled={loading} className="btn-primary" type="submit">
+            {loading ? "Registering..." : "Register"}
           </button>
         </form>
         <p>
