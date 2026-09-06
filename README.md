@@ -1,6 +1,6 @@
 # 📄 AI-Powered CV Generator
 
-![CV Generator Hero](https://via.placeholder.com/1000x400.png?text=AI-Powered+CV+Generator)
+
 
 An advanced full-stack AI-Driven Curriculum Vitae (CV) Generator developed using modern web technologies. This application leverages the power of generative AI models (Google Gemini) to transform user inputs and parsed PDFs into beautiful, professional portfolios effortlessly.
 
