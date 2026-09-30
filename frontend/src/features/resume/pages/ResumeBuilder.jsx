@@ -61,7 +61,6 @@ const ResumeBuilder = () => {
     experience: [],
     education: [],
     skills: [],
-    customSections: [],
   });
 
   const [template, setTemplate] = useState("modern");
