@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from "react";
-import { X, Sparkles, FileText, Briefcase, Zap, Info } from "lucide-react";
+import React, { useState } from "react";
+import { Target, FileText, Briefcase, Zap, Info } from "lucide-react";
 import { calculateATSScore } from "../utils/atsEngine";
 import ATSScoreGauge from "./ATSScoreGauge";
 import ATSKeywordAnalysis from "./ATSKeywordAnalysis";
 import ATSChecklist from "./ATSChecklist";
+import { Modal, Button } from "../../../components/ui";
 
 const SAMPLE_JOB_ROLES = [
   {
@@ -24,6 +25,9 @@ const ATSScannerModal = ({ isOpen, onClose, resumeData, initialJobDescription = 
   const [jobDescription, setJobDescription] = useState(initialJobDescription || "");
   const [activeTab, setActiveTab] = useState("keywords"); // "keywords" | "breakdown"
 
+  const [results, setResults] = useState(() => calculateATSScore(resumeData, initialJobDescription || ""));
+  const [_isCalculating, setIsCalculating] = useState(false);
+
   // Sync if initialJobDescription is passed from parent page
   React.useEffect(() => {
     if (initialJobDescription) {
@@ -31,43 +35,64 @@ const ATSScannerModal = ({ isOpen, onClose, resumeData, initialJobDescription = 
     }
   }, [initialJobDescription, isOpen]);
 
-  // Real-time zero-latency ATS calculation (0 AI tokens)
-  const results = useMemo(() => {
-    return calculateATSScore(resumeData, jobDescription);
-  }, [resumeData, jobDescription]);
+  // Offload 50+ heuristic ATS checks to Web Worker (avoids main-thread UI jank)
+  React.useEffect(() => {
+    if (!isOpen) return;
 
-  if (!isOpen) return null;
+    let worker = null;
+    try {
+      worker = new Worker(
+        new URL("../workers/ats.worker.js", import.meta.url),
+        { type: "module" }
+      );
+
+      setIsCalculating(true);
+      worker.postMessage({ resumeData, jobDescription });
+
+      worker.onmessage = (event) => {
+        if (event.data?.success) {
+          setResults(event.data.result);
+        }
+        setIsCalculating(false);
+      };
+
+      worker.onerror = (err) => {
+        console.warn("[ATS Worker] Fallback to main-thread:", err);
+        setResults(calculateATSScore(resumeData, jobDescription));
+        setIsCalculating(false);
+      };
+    } catch (_err) {
+      setResults(calculateATSScore(resumeData, jobDescription));
+      setIsCalculating(false);
+    }
+
+    return () => {
+      if (worker) worker.terminate();
+    };
+  }, [resumeData, jobDescription, isOpen]);
+
+  if (!isOpen || !results) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fadeIn">
-      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold shadow-xs">
-              <Zap size={16} />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-800 leading-tight">
-                Real-Time ATS Resume Scanner
-              </h3>
-              <p className="text-xs text-slate-500">
-                0-latency algorithmic keyword & impact matcher • 0 AI tokens used
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
-          {/* Top: Score Overview & JD Input */}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Real-Time ATS Resume Scanner"
+      subtitle="0-latency algorithmic keyword & impact matcher • Web Worker powered (0 AI tokens)"
+      icon={Zap}
+      footer={
+        <>
+          <span className="flex items-center gap-1.5 text-xs text-slate-500">
+            <Info size={13} className="text-blue-500" />
+            Analyzed {results.totalWordCount} words via dedicated Web Worker thread.
+          </span>
+          <Button variant="dark" size="sm" onClick={onClose}>
+            Done
+          </Button>
+        </>
+      }
+    >
+      {/* Top: Score Overview & JD Input */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center bg-slate-50 border border-slate-200/80 rounded-xl p-4">
             {/* Left: Score Gauge */}
             <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-slate-200 pb-4 md:pb-0 md:pr-4 flex justify-center">
@@ -122,7 +147,7 @@ const ATSScannerModal = ({ isOpen, onClose, resumeData, initialJobDescription = 
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              <Sparkles size={14} />
+              <Target size={14} />
               Keyword & Skills Match ({results.matchedKeywords.length})
             </button>
             <button
@@ -152,23 +177,7 @@ const ATSScannerModal = ({ isOpen, onClose, resumeData, initialJobDescription = 
               foundActionVerbs={results.foundActionVerbs}
             />
           )}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between text-xs text-slate-500">
-          <span className="flex items-center gap-1.5">
-            <Info size={13} className="text-blue-500" />
-            Analyzed {results.totalWordCount} words in your resume instantly.
-          </span>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

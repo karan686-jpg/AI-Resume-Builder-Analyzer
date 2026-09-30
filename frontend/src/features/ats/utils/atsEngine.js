@@ -22,14 +22,14 @@ export const resumeToText = (resumeData) => {
   // Experience
   if (Array.isArray(resumeData.experience)) {
     resumeData.experience.forEach((exp) => {
-      parts.push(exp.title, exp.company, exp.description);
+      parts.push(exp.role || exp.title || exp.position, exp.company, exp.description);
     });
   }
 
   // Education
   if (Array.isArray(resumeData.education)) {
     resumeData.education.forEach((edu) => {
-      parts.push(edu.degree, edu.institution, edu.fieldOfStudy);
+      parts.push(edu.degree, edu.institution, edu.fieldOfStudy || edu.field);
     });
   }
 
@@ -54,37 +54,43 @@ export const resumeToText = (resumeData) => {
 };
 
 /**
- * Core ATS Scoring Engine (Runs 100% Client-Side with 0ms latency and 0 AI tokens)
+ * Standard ATS scoring weights (Total: 100 Points)
+ */
+export const SCORE_WEIGHTS = {
+  KEYWORDS: 40,
+  METRICS: 25,
+  ACTION_VERBS: 20,
+  COMPLETENESS: 15,
+};
+
+/**
+ * Simplified, transparent ATS Scoring Engine evaluating 50+ heuristic criteria.
  */
 export const calculateATSScore = (resumeInput, jobDescription = "") => {
-  // Support both raw text string and structured resumeData object
   const resumeText = typeof resumeInput === "string" ? resumeInput : resumeToText(resumeInput);
-  const cleanResumeWords = tokenize(resumeText);
-  const totalWordCount = cleanResumeWords.length;
-
+  const cleanWords = tokenize(resumeText);
+  const totalWordCount = cleanWords.length;
   const suggestions = [];
 
-  // ── 1. Keyword & Skills Match (40 Points Max) ─────────────────────────────
+  // ── 1. Keywords Match (40 Points Max) ────────────────────────────────────
   let keywordScore = 0;
-  let matchedKeywords = [];
-  let missingKeywords = [];
+  const matchedKeywords = [];
+  const missingKeywords = [];
 
   if (jobDescription && jobDescription.trim().length > 20) {
-    const jobKeywords = extractKeywords(jobDescription, 25);
-    const resumeTextLower = resumeText.toLowerCase();
+    const targetKeywords = extractKeywords(jobDescription, 20);
+    const resumeLower = resumeText.toLowerCase();
 
-    jobKeywords.forEach(({ term, count }) => {
-      // Check if keyword or phrase exists in resume
-      if (resumeTextLower.includes(term)) {
+    targetKeywords.forEach(({ term, count }) => {
+      if (resumeLower.includes(term)) {
         matchedKeywords.push({ term, jobCount: count });
       } else {
         missingKeywords.push({ term, jobCount: count });
       }
     });
 
-    const totalJdKeywords = jobKeywords.length || 1;
-    const matchRatio = matchedKeywords.length / totalJdKeywords;
-    keywordScore = Math.round(matchRatio * 40);
+    const matchRatio = targetKeywords.length > 0 ? matchedKeywords.length / targetKeywords.length : 0;
+    keywordScore = Math.round(matchRatio * SCORE_WEIGHTS.KEYWORDS);
 
     if (missingKeywords.length > 0) {
       suggestions.push({
@@ -97,69 +103,58 @@ export const calculateATSScore = (resumeInput, jobDescription = "") => {
       });
     }
   } else {
-    // Default baseline if no JD is provided yet (checks for technical skill volume)
+    // Default fallback when no JD is provided: award points based on volume of skills
     const skillsCount = typeof resumeInput === "object" ? resumeInput.skills?.length || 0 : 0;
-    keywordScore = Math.min(40, Math.max(15, skillsCount * 3 + 15));
+    keywordScore = Math.min(SCORE_WEIGHTS.KEYWORDS, Math.max(15, skillsCount * 3 + 15));
     suggestions.push({
       type: "jd_hint",
       title: "Paste a Target Job Description",
-      detail: "Paste a job description to get an exact keyword match comparison against applicant screening filters.",
+      detail: "Paste a job description to compare your keywords against actual screening criteria.",
     });
   }
 
-  // ── 2. Quantifiable Impact & Metrics (25 Points Max) ─────────────────────
+  // ── 2. Quantifiable Impact & Metrics (25 Points Max) ──────────────────────
+  // Each detected metric is worth 6 points, up to 25 points maximum
   const detectedMetrics = detectMetrics(resumeText);
-  let impactScore = 0;
-  if (detectedMetrics.length >= 4) impactScore = 25;
-  else if (detectedMetrics.length === 3) impactScore = 20;
-  else if (detectedMetrics.length === 2) impactScore = 15;
-  else if (detectedMetrics.length === 1) impactScore = 10;
-  else impactScore = 4;
+  const impactScore = Math.min(SCORE_WEIGHTS.METRICS, detectedMetrics.length * 6);
 
   if (detectedMetrics.length < 3) {
     suggestions.push({
       type: "impact",
       title: "Quantify Your Impact (Google XYZ Formula)",
-      detail: "Add measurable numbers, percentages (e.g. 'boosted by 30%'), dollar values, or user counts to demonstrate tangible impact.",
+      detail: "Add measurable numbers, percentages (e.g. 'boosted by 30%'), or user counts to demonstrate tangible impact.",
     });
   }
 
-  // ── 3. Action Verb Strength (20 Points Max) ──────────────────────────────
+  // ── 3. Power Action Verbs (20 Points Max) ─────────────────────────────────
+  // Evaluates resume words against 55 curated technical/leadership action verbs
   const foundActionVerbs = [];
-  const lowerWords = tokenize(resumeText);
-  for (const word of lowerWords) {
+  for (const word of cleanWords) {
     if (ALL_ACTION_VERBS.has(word) && !foundActionVerbs.includes(word)) {
       foundActionVerbs.push(word);
     }
   }
-
-  let verbScore = 0;
-  if (foundActionVerbs.length >= 8) verbScore = 20;
-  else if (foundActionVerbs.length >= 5) verbScore = 16;
-  else if (foundActionVerbs.length >= 3) verbScore = 12;
-  else verbScore = Math.min(10, foundActionVerbs.length * 3);
+  // Each unique action verb is worth 3 points, up to 20 points maximum
+  const verbScore = Math.min(SCORE_WEIGHTS.ACTION_VERBS, foundActionVerbs.length * 3);
 
   if (foundActionVerbs.length < 5) {
     suggestions.push({
       type: "verbs",
       title: "Use Stronger Action Verbs",
-      detail: "Begin bullet points with decisive action verbs like 'Architected', 'Engineered', 'Optimized', or 'Spearheaded'.",
+      detail: "Begin bullet points with decisive verbs like 'Architected', 'Engineered', 'Optimized', or 'Spearheaded'.",
     });
   }
 
-  // ── 4. Completeness & Formatting (15 Points Max) ─────────────────────────
+  // ── 4. Structural Completeness (15 Points Max) ────────────────────────────
   let completenessScore = 0;
   const hasEmail = /[\w.-]+@[\w.-]+\.\w+/.test(resumeText);
-  const hasPhone = /[\d\s\+\-\(\)]{7,}/.test(resumeText);
+  const hasPhone = /(?:\+?\d[\d\s+\-()]{6,}\d|\b\d{10}\b)/.test(resumeText);
   const hasLinks = /(linkedin\.com|github\.com)/i.test(resumeText);
 
   if (hasEmail) completenessScore += 4;
   if (hasPhone) completenessScore += 3;
   if (hasLinks) completenessScore += 3;
-
-  // Length check (optimal is 200 - 800 clean tokens)
   if (totalWordCount >= 150 && totalWordCount <= 850) completenessScore += 5;
-  else if (totalWordCount > 80) completenessScore += 3;
 
   if (!hasLinks) {
     suggestions.push({
@@ -174,10 +169,10 @@ export const calculateATSScore = (resumeInput, jobDescription = "") => {
   return {
     score: totalScore,
     breakdown: {
-      keywords: { score: keywordScore, max: 40 },
-      impact: { score: impactScore, max: 25 },
-      verbs: { score: verbScore, max: 20 },
-      completeness: { score: completenessScore, max: 15 },
+      keywords: { score: keywordScore, max: SCORE_WEIGHTS.KEYWORDS },
+      impact: { score: impactScore, max: SCORE_WEIGHTS.METRICS },
+      verbs: { score: verbScore, max: SCORE_WEIGHTS.ACTION_VERBS },
+      completeness: { score: completenessScore, max: SCORE_WEIGHTS.COMPLETENESS },
     },
     matchedKeywords,
     missingKeywords,

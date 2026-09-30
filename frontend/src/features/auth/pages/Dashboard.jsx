@@ -11,10 +11,19 @@ import {
   Edit,
   ExternalLink,
   LogOut,
-  Sparkles,
+  Target,
   Loader2,
   Calendar,
 } from "lucide-react";
+
+import { LoadingScreen, EmptyState } from "../../../components/ui";
+
+// ── Score color helper ──────────────────────────────────────────────────────
+const scoreStyle = (score) => {
+  if (score >= 80) return "bg-emerald-500/15 text-emerald-400";
+  if (score >= 60) return "bg-amber-500/15 text-amber-400";
+  return "bg-rose-500/15 text-rose-400";
+};
 
 const Dashboard = () => {
   const { user, handleLogout } = useAuth();
@@ -36,13 +45,10 @@ const Dashboard = () => {
         getUserResumes(),
         getAllInterviewReports(),
       ]);
-
-      if (resumesData.status === "fulfilled" && Array.isArray(resumesData.value)) {
+      if (resumesData.status === "fulfilled" && Array.isArray(resumesData.value))
         setResumes(resumesData.value);
-      }
-      if (reportsData.status === "fulfilled" && Array.isArray(reportsData.value)) {
+      if (reportsData.status === "fulfilled" && Array.isArray(reportsData.value))
         setReports(reportsData.value);
-      }
     } catch (err) {
       console.error("Dashboard fetch error:", err);
     } finally {
@@ -70,264 +76,117 @@ const Dashboard = () => {
     navigate("/login");
   };
 
+  // ── Loading State ──────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#0f172a",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#94a3b8",
-          gap: "12px",
-          fontFamily: "Inter, sans-serif",
-        }}
-      >
-        <Loader2 className="animate-spin" size={28} color="#3b82f6" />
-        <span>Loading your workspace...</span>
-      </div>
-    );
+    return <LoadingScreen message="Loading your career workspace..." />;
   }
 
+  // ── Dashboard ──────────────────────────────────────────────────────────────
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#0b0f19",
-        color: "#f8fafc",
-        fontFamily: "'Inter', sans-serif",
-        padding: "30px 40px",
-      }}
-    >
-      {/* Top Navbar */}
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          paddingBottom: "20px",
-          marginBottom: "36px",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span
-            style={{
-              background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-              padding: "6px 12px",
-              borderRadius: "8px",
-              fontWeight: 700,
-              fontSize: "18px",
-            }}
-          >
+    <div className="min-h-screen bg-[#0b0f19] text-slate-100 font-[Inter,sans-serif] px-8 py-8">
+
+      {/* ── Top Navbar ── */}
+      <header className="flex justify-between items-center border-b border-white/10 pb-5 mb-9">
+        <div className="flex items-center gap-2.5">
+          <span className="bg-gradient-to-br from-blue-500 to-violet-600 px-3 py-1 rounded-lg font-bold text-lg">
             ✦
           </span>
-          <h1 style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>
-            Career Workspace
-          </h1>
+          <h1 className="text-xl font-bold m-0">Career Workspace</h1>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <span style={{ color: "#94a3b8", fontSize: "14px" }}>
+        <div className="flex items-center gap-4">
+          <span className="text-slate-400 text-sm">
             👤 {user?.username || user?.email || "User"}
           </span>
           <button
             onClick={onLogout}
-            style={{
-              background: "rgba(239, 68, 68, 0.15)",
-              border: "1px solid rgba(239, 68, 68, 0.3)",
-              color: "#fca5a5",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "13px",
-            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium bg-rose-500/15 border border-rose-500/30 text-rose-300 hover:bg-rose-500/25 transition-colors cursor-pointer"
           >
             <LogOut size={14} /> Logout
           </button>
         </div>
       </header>
 
-      {/* Hero Welcome & Quick Action Buttons */}
-      <section
-        style={{
-          background: "linear-gradient(135deg, rgba(37,99,235,0.15), rgba(139,92,246,0.15))",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "16px",
-          padding: "30px",
-          marginBottom: "40px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "20px",
-        }}
-      >
+      {/* ── Hero Welcome & Quick Actions ── */}
+      <section className="flex flex-wrap justify-between items-center gap-5 bg-gradient-to-br from-blue-600/15 to-violet-600/15 border border-white/10 rounded-2xl p-8 mb-10">
         <div>
-          <h2 style={{ fontSize: "26px", fontWeight: 700, marginBottom: "8px" }}>
+          <h2 className="text-2xl font-bold mb-2">
             Welcome back, {user?.username || "Candidate"}! 👋
           </h2>
-          <p style={{ color: "#94a3b8", margin: 0, fontSize: "15px" }}>
+          <p className="text-slate-400 text-sm m-0">
             Manage your high-impact resumes and AI-powered interview preparation roadmaps.
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+        <div className="flex flex-wrap gap-3">
           <button
             onClick={() => navigate("/builder")}
-            style={{
-              background: "#2563eb",
-              color: "#fff",
-              border: "none",
-              padding: "12px 20px",
-              borderRadius: "10px",
-              fontWeight: 600,
-              fontSize: "14px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              boxShadow: "0 4px 14px rgba(37,99,235,0.4)",
-            }}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm bg-blue-600 text-white shadow-[0_4px_14px_rgba(37,99,235,0.4)] hover:bg-blue-500 transition-colors cursor-pointer"
           >
             <Plus size={16} /> Create New Resume
           </button>
-
           <button
             onClick={() => navigate("/analyze")}
-            style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              color: "#e2e8f0",
-              padding: "12px 20px",
-              borderRadius: "10px",
-              fontWeight: 600,
-              fontSize: "14px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm bg-white/8 border border-white/20 text-slate-200 hover:bg-white/15 transition-colors cursor-pointer"
           >
-            <Sparkles size={16} color="#a855f7" /> New Interview Strategy
+            <Target size={16} color="#a855f7" /> New Interview Strategy
           </button>
         </div>
       </section>
 
-      {/* Main Grid: My Resumes & Interview Reports */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "32px" }}>
-        {/* Section 1: My Resumes */}
+      {/* ── Main Grid: Resumes & Reports ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        {/* ── Section 1: My Resumes ── */}
         <section>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "18px" }}>
-            <FileText size={20} color="#3b82f6" />
-            <h3 style={{ fontSize: "18px", fontWeight: 600, margin: 0 }}>
+          <div className="flex items-center gap-2 mb-5">
+            <FileText size={20} className="text-blue-400" />
+            <h3 className="text-lg font-semibold m-0">
               My Saved Resumes ({resumes.length})
             </h3>
           </div>
 
           {resumes.length === 0 ? (
-            <div
-              style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px dashed rgba(255,255,255,0.15)",
-                borderRadius: "12px",
-                padding: "40px 20px",
-                textAlign: "center",
-                color: "#64748b",
-              }}
-            >
-              <FileText size={36} style={{ opacity: 0.5, marginBottom: "10px" }} />
-              <p style={{ margin: "0 0 12px 0", fontSize: "14px" }}>
-                You haven't saved any resumes to your account yet.
-              </p>
-              <button
-                onClick={() => navigate("/builder")}
-                style={{
-                  background: "#2563eb",
-                  color: "#fff",
-                  border: "none",
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                }}
-              >
-                Start Building
-              </button>
-            </div>
+            <EmptyState
+              icon={FileText}
+              message="You haven't saved any resumes to your account yet."
+              actionLabel="Start Building"
+              onAction={() => navigate("/builder")}
+            />
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div className="flex flex-col gap-3">
               {resumes.map((resume) => (
                 <div
                   key={resume._id}
                   onClick={() => navigate(`/builder?id=${resume._id}`)}
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "12px",
-                    padding: "16px 20px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    transition: "border 0.2s, transform 0.2s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(59,130,246,0.5)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
+                  className="group flex justify-between items-center bg-white/[0.04] border border-white/10 hover:border-blue-500/50 rounded-xl px-5 py-4 cursor-pointer transition-colors"
                 >
                   <div>
-                    <h4 style={{ margin: "0 0 6px 0", fontSize: "15px", fontWeight: 600 }}>
+                    <h4 className="text-[15px] font-semibold mb-1.5">
                       {resume.title || "Untitled Resume"}
                     </h4>
-                    <div style={{ display: "flex", gap: "12px", color: "#64748b", fontSize: "12px", alignItems: "center" }}>
-                      <span style={{ textTransform: "capitalize", background: "rgba(59,130,246,0.15)", color: "#60a5fa", padding: "2px 8px", borderRadius: "4px" }}>
+                    <div className="flex gap-3 items-center text-xs text-slate-500">
+                      <span className="capitalize bg-blue-500/15 text-blue-400 px-2 py-0.5 rounded">
                         {resume.activeTemplate || "modern"}
                       </span>
-                      <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        <Calendar size={12} />
+                      <span className="flex items-center gap-1">
+                        <Calendar size={11} />
                         {new Date(resume.updatedAt || resume.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => navigate(`/builder?id=${resume._id}`)}
-                      style={{
-                        background: "rgba(255,255,255,0.08)",
-                        border: "none",
-                        color: "#93c5fd",
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        fontSize: "12px",
-                      }}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs bg-white/10 text-blue-300 hover:bg-white/20 transition-colors cursor-pointer"
                     >
                       <Edit size={12} /> Edit
                     </button>
-
                     <button
                       onClick={(e) => handleDeleteResume(e, resume._id)}
                       disabled={deletingId === resume._id}
-                      style={{
-                        background: "rgba(239, 68, 68, 0.1)",
-                        border: "none",
-                        color: "#f87171",
-                        padding: "6px 10px",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        fontSize: "12px",
-                      }}
+                      className="flex items-center px-2.5 py-1.5 rounded-md text-xs bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors cursor-pointer disabled:opacity-50"
                     >
                       {deletingId === resume._id ? (
                         <Loader2 size={12} className="animate-spin" />
@@ -342,100 +201,44 @@ const Dashboard = () => {
           )}
         </section>
 
-        {/* Section 2: Past Interview Strategies */}
+        {/* ── Section 2: Interview Plans ── */}
         <section>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "18px" }}>
-            <Briefcase size={20} color="#a855f7" />
-            <h3 style={{ fontSize: "18px", fontWeight: 600, margin: 0 }}>
+          <div className="flex items-center gap-2 mb-5">
+            <Briefcase size={20} className="text-violet-400" />
+            <h3 className="text-lg font-semibold m-0">
               Recent Interview Plans ({reports.length})
             </h3>
           </div>
 
           {reports.length === 0 ? (
-            <div
-              style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px dashed rgba(255,255,255,0.15)",
-                borderRadius: "12px",
-                padding: "40px 20px",
-                textAlign: "center",
-                color: "#64748b",
-              }}
-            >
-              <Briefcase size={36} style={{ opacity: 0.5, marginBottom: "10px" }} />
-              <p style={{ margin: "0 0 12px 0", fontSize: "14px" }}>
-                No interview preparation plans generated yet.
-              </p>
-              <button
-                onClick={() => navigate("/analyze")}
-                style={{
-                  background: "#7c3aed",
-                  color: "#fff",
-                  border: "none",
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                }}
-              >
-                Analyze a Job
-              </button>
-            </div>
+            <EmptyState
+              icon={Briefcase}
+              message="No interview preparation plans generated yet."
+              actionLabel="Analyze a Job"
+              onAction={() => navigate("/analyze")}
+            />
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div className="flex flex-col gap-3">
               {reports.map((report) => (
                 <div
                   key={report._id}
                   onClick={() => navigate(`/interview/${report._id}`)}
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "12px",
-                    padding: "16px 20px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    transition: "border 0.2s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(168,85,247,0.5)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
+                  className="flex justify-between items-center bg-white/[0.04] border border-white/10 hover:border-violet-500/50 rounded-xl px-5 py-4 cursor-pointer transition-colors"
                 >
                   <div>
-                    <h4 style={{ margin: "0 0 6px 0", fontSize: "15px", fontWeight: 600 }}>
+                    <h4 className="text-[15px] font-semibold mb-1.5">
                       {report.title || "Target Role Strategy"}
                     </h4>
-                    <span style={{ color: "#64748b", fontSize: "12px" }}>
+                    <span className="text-slate-500 text-xs">
                       {new Date(report.createdAt).toLocaleDateString()}
                     </span>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                    <span
-                      style={{
-                        padding: "4px 10px",
-                        borderRadius: "20px",
-                        fontSize: "12px",
-                        fontWeight: 700,
-                        background:
-                          report.matchScore >= 80
-                            ? "rgba(16,185,129,0.15)"
-                            : report.matchScore >= 60
-                            ? "rgba(245,158,11,0.15)"
-                            : "rgba(239,68,68,0.15)",
-                        color:
-                          report.matchScore >= 80
-                            ? "#34d399"
-                            : report.matchScore >= 60
-                            ? "#fbbf24"
-                            : "#f87171",
-                      }}
-                    >
+                  <div className="flex items-center gap-3.5">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${scoreStyle(report.matchScore)}`}>
                       {report.matchScore}% Match
                     </span>
-
-                    <span style={{ color: "#a855f7", display: "flex", alignItems: "center" }}>
+                    <span className="text-violet-400">
                       <ExternalLink size={15} />
                     </span>
                   </div>
@@ -444,6 +247,7 @@ const Dashboard = () => {
             </div>
           )}
         </section>
+
       </div>
     </div>
   );

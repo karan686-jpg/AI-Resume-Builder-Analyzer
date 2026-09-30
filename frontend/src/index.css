@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+#root {
+  min-height: 100vh;
+  background-color: #09090e;
+  color: #f8fafc;
+}
+
 /* 
   Custom styles for smooth scrolling and scrollbar 
 */

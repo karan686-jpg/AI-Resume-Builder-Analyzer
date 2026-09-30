@@ -1,72 +1,77 @@
-# 📄 AI-Powered CV Generator
+# 📄 AI-Powered Resume Builder & Interview Analyzer
 
+> **Tech Stack:** Express 5, React 19, Web Workers, Google Gemini AI, Node.js, MongoDB
 
-
-An advanced full-stack AI-Driven Curriculum Vitae (CV) Generator developed using modern web technologies. This application leverages the power of generative AI models (Google Gemini) to transform user inputs and parsed PDFs into beautiful, professional portfolios effortlessly.
+An end-to-end full-stack platform featuring an in-browser zero-token ATS scoring engine and an enterprise-grade resilient AI interview preparation gateway.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Core Architectural Highlights (Resume Highlights)
 
-* **🤖 AI-Powered Content Formatting:** Employs the Google Gemini AI module to parse user credentials and intelligently formulate descriptions and experiences.
-* **🔧 Full-Stack React & Express:** Built efficiently with a React/Vite frontend for lightning-fast UI and an Express/Node.js backend for robust API integration.
-* **☁️ Cloud Integrated Services:** Employs MongoDB/Mongoose for scalable data storage and ImageKit & Multer for versatile image and PDF upload handling.
-* **🎨 Modern UI & PDF Export:** Fully styled using Tailwind CSS and Lucide React icons, offering an aesthetically pleasing interface with 1-click PDF exporting via `html2pdf.js`.
-* **🔒 Secure Authentication:** Custom JWT integration alongside Bcrypt to ensure secure handling of personal data.
+* **⚡ In-Browser ATS Scoring Engine (Web Workers):**
+  Performs 50+ heuristic checks (target keyword matching, quantifiable metrics via Google XYZ formula, action verb strength, contact completeness) inside a dedicated **Web Worker**. Delivers instant scoring and actionable feedback without consuming LLM API tokens or blocking the main React UI thread.
+
+* **🛡️ Express 5 AI Gateway with Resilience Patterns:**
+  Engineered a robust AI gateway with strict **JSON Schema validation**, **exponential jittered backoff**, and a **3-tier Gemini model fallback strategy** (`gemini-3.5-flash` → `gemini-3.7-flash` → `gemini-3.8-flash`) to ensure uninterrupted availability against API rate limits and model service outages.
+
+* **🎯 Automated Interview Preparation & Skill-Gap Analysis:**
+  Extracts text in-memory from uploaded PDF resumes using `pdf-parse` without saving unneeded files to disk. Generates customized technical & behavioral interview Q&A with model answers, comprehensive skill-gap analysis, and a structured 7-day preparation roadmap.
 
 ---
 
 ## 🚀 Tech Stack
 
 ### Frontend
-- **React.js 19**
-- **Vite**
+- **React 19 & Vite**
+- **Web Workers API** (Non-blocking background heuristic analysis)
 - **Tailwind CSS V4**
-- **React Router**
-- **Lucide Icons**
-- **HTML2PDF.js**
+- **React Router 7**
+- **Lucide React**
 
 ### Backend
 - **Node.js & Express 5**
-- **MongoDB (Mongoose)**
-- **Google GenAI (Gemini)**
-- **JSON Web Tokens (JWT) & Bcrypt**
-- **ImageKit & Multer**
-- **PDF-Parse** & **Zod** Validation
+- **@google/genai SDK** (Structured JSON Output via `responseSchema`)
+- **MongoDB & Mongoose**
+- **Multer** (In-memory buffer upload)
+- **pdf-parse** (In-memory PDF text extraction)
+- **JSON Web Tokens (JWT) & Bcrypt.js**
 
 ---
 
 ## 💻 Getting Started
 
-### Prerequisites
-Make sure you have [Node.js](https://nodejs.org/) installed along with a MongoDB cluster and API keys for Google Gemini and ImageKit.
-
-### 1. Clone the repository
-```bash
-git clone https://github.com/karan686-jpg/AI-Resume-Builder-Analyzer.git
-cd AI-Resume-Builder-Analyzer
-```
+### 1. Prerequisites
+- [Node.js](https://nodejs.org/) (v18+ recommended)
+- MongoDB Database (Local or MongoDB Atlas)
+- Google Gemini API Key
 
 ### 2. Backend Setup
 ```bash
 cd backend
 npm install
 ```
-*Note: Create a `.env` file in the `backend` directory containing your necessary environment variables (e.g., `PORT`, `MONGO_URI`, `GEMINI_API_KEY`, `JWT_SECRET`, ImageKit strings).*
+
+Create a `.env` file in the `backend` folder:
+```env
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret_key
+GOOGLE_GENAI_API_KEY=your_gemini_api_key
+```
+
+Run the backend server:
 ```bash
 npm run dev
 ```
 
 ### 3. Frontend Setup
-Open a new terminal window:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Navigate to `http://localhost:5173` to interact with your CV generator.
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
 ## 👨‍💻 Developed by Karan Datta
-A showcase project built to demonstrate proficiency in orchestrating GenAI integration within a modern JavaScript ecosystem.
+Built as an enterprise-grade showcase of AI integration, browser concurrency with Web Workers, and backend resilience engineering.

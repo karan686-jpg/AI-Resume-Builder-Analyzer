@@ -1,19 +1,11 @@
 import React, { useRef, useState, useEffect } from "react";
-import ClassicTemplate from "./templates/ClassicTemplate";
 import ModernTemplate from "./templates/ModernTemplate";
-import MinimalTemplate from "./templates/MinimalTemplate";
-import CreativeTemplate from "./templates/CreativeTemplate";
-import ExecutiveTemplate from "./templates/ExecutiveTemplate";
-import ProfessionalTemplate from "./templates/ProfessionalTemplate";
-import CorporateTemplate from "./templates/CorporateTemplate";
-import SimpleTemplate from "./templates/SimpleTemplate";
-import ElegantTemplate from "./templates/ElegantTemplate";
-import { Download, Share2, Check, Printer } from "lucide-react";
+import { Share2, Check, Printer } from "lucide-react";
 
 /**
- * ResumePreview — receives template as a prop from ResumeBuilder
+ * ResumePreview — renders the live A4 resume preview using ModernTemplate
  */
-const ResumePreviewWrapper = ({ data, template, designValues = {} }) => {
+const ResumePreviewWrapper = ({ data }) => {
 
   const [copied, setCopied] = useState(false);
   const containerRef = useRef(null);
@@ -40,10 +32,6 @@ const ResumePreviewWrapper = ({ data, template, designValues = {} }) => {
     return () => window.removeEventListener("resize", updateScale);
   }, []);
 
-  const handleDownloadPdf = () => {
-    window.print();
-  };
-
   const handlePrint = () => {
     window.print();
   };
@@ -59,28 +47,9 @@ const ResumePreviewWrapper = ({ data, template, designValues = {} }) => {
   };
 
   const renderTemplate = () => {
-    switch (template) {
-      case "classic":
-        return <ClassicTemplate data={data} />;
-      case "minimal":
-        return <MinimalTemplate data={data} />;
-      case "creative":
-        return <CreativeTemplate data={data} />;
-      case "executive":
-        return <ExecutiveTemplate data={data} />;
-      case "professional":
-        return <ProfessionalTemplate data={data} />;
-      case "corporate":
-        return <CorporateTemplate data={data} />;
-      case "simple":
-        return <SimpleTemplate data={data} />;
-      case "elegant":
-        return <ElegantTemplate data={data} />;
-      case "modern":
-      default:
-        return <ModernTemplate data={data} />;
-    }
+    return <ModernTemplate data={data} />;
   };
+
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden relative print:overflow-visible">
@@ -138,15 +107,11 @@ const ResumePreviewWrapper = ({ data, template, designValues = {} }) => {
           <div
             id="resume-pdf-content"
             ref={printRef}
-            className="bg-white shadow-2xl rounded-sm shrink-0 overflow-hidden print:shadow-none print:w-full"
+            className="bg-white shadow-2xl rounded-sm shrink-0 overflow-hidden print:shadow-none print:w-full transition-all"
             style={{
               width: "794px",
               minHeight: "1123px",
-              fontFamily: data.fontFamily || undefined,
-              fontSize: designValues.fontSize ? `${designValues.fontSize}pt` : undefined,
-              lineHeight: designValues.lineHeight ? (1 + (designValues.lineHeight - 1) * 0.1).toFixed(2) : undefined,
-              padding: designValues.pageMargin ? `${designValues.pageMargin * 8}px` : undefined,
-              ...(designValues.bgStyle || {}),
+              fontFamily: data.fontFamily || "'Inter', sans-serif",
             }}
           >
             {renderTemplate()}

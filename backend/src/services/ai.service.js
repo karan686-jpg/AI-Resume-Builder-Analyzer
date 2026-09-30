@@ -68,14 +68,15 @@ const interviewReportJsonSchema = {
   ]
 };
 
+// 3-Tier Gemini Fallback Strategy to ensure high availability under heavy API load or rate limits
 const FALLBACK_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash"
+  "gemini-3.5-flash", // Tier 1: Primary production model (ultra-fast, JSON-schema native)
+  "gemini-3.7-flash", // Tier 2: Battle-tested secondary fallback
+  "gemini-3.8-flash", // Tier 3: High-capacity final tier
 ];
 
 /**
- * Executes a Gemini generation request with model cascading and exponential backoff retry
+ * Executes a Gemini generation request with 3-tier model cascading and exponential jittered backoff retry
  * on HTTP 429 (Rate Limit) and 503 (Overloaded) errors.
  */
 async function generateContentWithRetryAndFallback(options, maxRetries = 2) {
@@ -96,19 +97,24 @@ async function generateContentWithRetryAndFallback(options, maxRetries = 2) {
         const isModelNotFound = error.status === 404 || error.message?.includes("not found");
 
         if (isModelNotFound) {
-          // Immediately cascade to next candidate model
-          console.warn(`[GenAI] Model ${model} not found or unsupported. Falling back to next available model...`);
+          // Immediately cascade to next candidate model in the 3-tier hierarchy
+          console.warn(`[GenAI] Tier model ${model} not found or unsupported. Cascading to next fallback tier...`);
           break;
         }
 
         if ((isRateLimit || isOverloaded) && attempt < maxRetries) {
-          const waitMs = 1200 * attempt;
-          console.warn(`[GenAI] ${model} hit status ${error.status || 'busy'}. Retrying attempt ${attempt}/${maxRetries} after ${waitMs}ms...`);
+          // Exponential backoff base: 1000ms * 2^(attempt - 1)
+          const baseDelay = 1000 * Math.pow(2, attempt - 1);
+          // Jitter (0-500ms random offset) to prevent Thundering Herd Problem across concurrent users
+          const jitter = Math.floor(Math.random() * 500);
+          const waitMs = baseDelay + jitter;
+
+          console.warn(`[GenAI] ${model} hit status ${error.status || 'busy'}. Retrying attempt ${attempt}/${maxRetries} after ${waitMs}ms (exponential jittered backoff)...`);
           await new Promise((res) => setTimeout(res, waitMs));
           continue;
         }
 
-        // On other errors or exhausted retries, break to next model
+        // On other errors or exhausted retries for this tier, cascade to next fallback model
         break;
       }
     }

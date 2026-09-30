@@ -13,17 +13,20 @@ const resumeSchema = new mongoose.Schema({
   },
   themeColor: {
     type: String,
-    default: "#000000"
+    default: "#2563eb"
   },
   activeTemplate: {
     type: String,
-    default: "classic"
+    default: "modern"
   },
   personalInfo: {
     name: { type: String, default: "" },
+    title: { type: String, default: "" },
     email: { type: String, default: "" },
     phone: { type: String, default: "" },
     linkedIn: { type: String, default: "" },
+    github: { type: String, default: "" },
+    portfolio: { type: String, default: "" },
     imageUrl: { type: String, default: "" }
   },
   professionalSummary: {
@@ -31,19 +34,31 @@ const resumeSchema = new mongoose.Schema({
     default: ""
   },
   experience: [{
-    company: { type: String, required: true },
-    role: { type: String, required: true },
-    dates: { type: String, required: true },
+    company: { type: String, default: "" },
+    role: { type: String, default: "" },
+    dates: { type: String, default: "" },
     description: { type: String, default: "" }
   }],
   education: [{
-    institution: { type: String, required: true },
-    degree: { type: String, required: true },
-    dates: { type: String, required: true },
+    institution: { type: String, default: "" },
+    degree: { type: String, default: "" },
+    dates: { type: String, default: "" },
     fieldOfStudy: { type: String, default: "" }
   }],
   skills: [{
     type: String
+  }],
+  customSections: [{
+    id: { type: String },
+    title: { type: String, default: "Projects" },
+    items: [{
+      id: { type: String },
+      title: { type: String, default: "" },
+      subtitle: { type: String, default: "" },
+      dates: { type: String, default: "" },
+      link: { type: String, default: "" },
+      description: { type: String, default: "" }
+    }]
   }]
 }, {
   timestamps: true

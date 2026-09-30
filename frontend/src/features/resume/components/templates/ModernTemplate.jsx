@@ -1,5 +1,6 @@
 import React from "react";
 import { Mail, Phone, Linkedin, Github, Globe } from "lucide-react";
+import FormattedText from "../FormattedText";
 
 const ModernTemplate = ({ data }) => {
   const {
@@ -88,7 +89,7 @@ const ModernTemplate = ({ data }) => {
                 Profile
               </h2>
               <p className="text-gray-600 leading-relaxed text-sm">
-                {professionalSummary}
+                <FormattedText text={professionalSummary} />
               </p>
             </section>
           )}
@@ -134,7 +135,7 @@ const ModernTemplate = ({ data }) => {
                               className="leading-relaxed relative pl-4"
                             >
                               <span className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full bg-gray-300"></span>
-                              {cleanPoint}
+                              <FormattedText text={cleanPoint} />
                             </li>
                           ) : null;
                         })}
@@ -203,7 +204,7 @@ const ModernTemplate = ({ data }) => {
                                 className="leading-relaxed relative pl-4"
                               >
                                 <span className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full bg-gray-300"></span>
-                                {cleanPoint}
+                                <FormattedText text={cleanPoint} />
                               </li>
                             ) : null;
                           })}

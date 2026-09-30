@@ -5,7 +5,7 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&family=Playfair+Display:wght@400;700&display=swap");
 
-/* ---- Clean Responsive Page Layout (Natural, smooth scrolling everywhere) ---- */
+/* ---- Clean Responsive Page Layout ---- */
 .rb-page {
   min-height: 100vh;
   width: 100%;
@@ -112,7 +112,7 @@
   min-width: 0;
 }
 
-/* ---- View Mode Tabs (Edit / Templates / Rearrange / Design & Font) ---- */
+/* ---- View Mode Tabs (Edit / Templates) ---- */
 .rb-view-tabs {
   display: flex;
   align-items: center;
@@ -148,59 +148,6 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
 }
 
-/* ---- Rearrange Full View ---- */
-.rb-rearrange-view {
-  padding: 8px 0;
-}
-
-.rb-rearrange-header {
-  margin-bottom: 20px;
-}
-.rb-rearrange-header h3 {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 4px;
-}
-.rb-rearrange-header p {
-  font-size: 0.82rem;
-  color: #94a3b8;
-  margin: 0;
-}
-
-.rb-rearrange-page-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-}
-
-.rb-rearrange-page-label {
-  text-align: center;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #94a3b8;
-  letter-spacing: 0.06em;
-  margin-bottom: 12px;
-}
-
-.rb-sm-item--locked {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  cursor: default;
-  margin-bottom: 8px;
-}
-.rb-sm-lock {
-  font-size: 13px;
-  flex-shrink: 0;
-}
-.rb-sm-item--dragging {
-  opacity: 0.5;
-  background: #f8fafc;
-  border-style: dashed;
-}
-
 .rb-header-right {
   display: flex;
   align-items: center;
@@ -208,7 +155,7 @@
   flex-shrink: 0;
 }
 
-/* Base Action Button */
+/* ---- Base Action Button ---- */
 .rb-action-btn {
   display: flex;
   align-items: center;
@@ -235,22 +182,6 @@
 .rb-save-btn.saved {
   background: #10b981;
   border-color: #10b981;
-}
-
-/* Auto-Format (0 Tokens, Zero AI) */
-.rb-autoformat-btn {
-  background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
-  font-weight: 700;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
-}
-.rb-autoformat-btn:hover {
-  background: linear-gradient(135deg, #dbeafe 0%, #c7d2fe 100%);
-  border-color: #93c5fd;
-  color: #1d4ed8;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.15);
 }
 
 /* ATS Checker Button */
@@ -296,7 +227,19 @@
   cursor: not-allowed;
 }
 
-/* ---- Main Grid Container (Natural page scroll + Sticky Preview) ---- */
+/* Sample Data Button */
+.rb-sample-btn {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+.rb-sample-btn:hover {
+  background: #fde68a;
+  border-color: #f59e0b;
+  transform: translateY(-1px);
+}
+
+/* ---- Main Grid Container ---- */
 .rb-main {
   flex: 1;
   display: grid;
@@ -310,16 +253,16 @@
   align-items: start;
 }
 
-/* ---- Left Column (Editor - Natural, unconstrained scroll with generous bottom space) ---- */
+/* ---- Left Column (Editor) ---- */
 .rb-left-col {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding-bottom: 240px; /* Generous padding so the lowest buttons/forms are never hidden or cut off */
+  padding-bottom: 240px;
   min-width: 0;
 }
 
-/* Tabs Navigator (Sticky for easy section jumping at all times) */
+/* ---- Tabs Navigator (Sticky) ---- */
 .rb-tabs-nav {
   position: sticky;
   top: 76px;
@@ -389,12 +332,11 @@
   color: #64748b;
 }
 
-/* Section card wrap */
+/* ---- Section Card ---- */
 .rb-section-card {
   animation: fadeIn 0.2s ease-out;
 }
 
-/* ---- Polished SaaS Card Styles ---- */
 .rb-section-card > div {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
@@ -403,13 +345,11 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.02) !important;
   transition: box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
-
 .rb-section-card > div:hover {
   border-color: #cbd5e1 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
 }
 
-/* Polished Card Headings */
 .rb-section-card h2 {
   font-size: 1.05rem !important;
   font-weight: 700 !important;
@@ -421,7 +361,6 @@
   gap: 8px !important;
 }
 
-/* Polished Form Labels */
 .rb-section-card label {
   font-size: 0.8rem !important;
   font-weight: 600 !important;
@@ -430,7 +369,6 @@
   display: block !important;
 }
 
-/* Polished Input Fields */
 .rb-section-card input[type="text"],
 .rb-section-card input[type="email"],
 .rb-section-card input[type="tel"],
@@ -446,7 +384,6 @@
   color: #0f172a !important;
   transition: all 0.15s ease !important;
 }
-
 .rb-section-card input:focus,
 .rb-section-card textarea:focus,
 .rb-section-card select:focus {
@@ -455,7 +392,6 @@
   outline: none !important;
 }
 
-/* Polished Sub-item containers */
 .rb-section-card .border,
 .rb-section-card .border-gray-200 {
   border-color: #e2e8f0 !important;
@@ -463,14 +399,8 @@
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .rb-bottom-spacer {
@@ -478,7 +408,7 @@
   flex-shrink: 0;
 }
 
-/* ---- Right Column (Sticky Live Studio Preview) ---- */
+/* ---- Right Column (Sticky Live Preview) ---- */
 .rb-right-col {
   position: sticky;
   top: 84px;
@@ -493,7 +423,7 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
-/* ---- Print Styles (100% Crisp Vector PDF) ---- */
+/* ---- Print Styles (Crisp PDF output) ---- */
 @media print {
   @page {
     size: A4 portrait;
@@ -545,204 +475,26 @@
   }
 }
 
-/* ---- Sample / Backup / Import Buttons ---- */
-.rb-sample-btn {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fcd34d;
-}
-.rb-sample-btn:hover {
-  background: #fde68a;
-  border-color: #f59e0b;
-  transform: translateY(-1px);
-}
-
-.rb-export-btn {
-  background: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #6ee7b7;
-}
-.rb-export-btn:hover {
-  background: #d1fae5;
-  border-color: #10b981;
-  transform: translateY(-1px);
-}
-
-.rb-import-btn {
-  background: #eff6ff;
-  color: #1e40af;
-  border: 1px solid #93c5fd;
-}
-.rb-import-btn:hover {
-  background: #dbeafe;
-  border-color: #3b82f6;
-  transform: translateY(-1px);
-}
-
-/* ---- Intro Section Layout ---- */
-.rb-intro-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.rb-layout-toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.rb-layout-toggle-btn:hover,
-.rb-layout-toggle-btn.active {
-  background: #e0e7ff;
-  color: #4338ca;
-  border-color: #a5b4fc;
-  transform: translateY(-1px);
-}
-
-/* ---- Drag-and-Drop Section Manager ---- */
-.rb-section-manager {
-  margin-top: 14px;
-  padding: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  animation: fadeSlideDown 0.2s ease;
-}
-
-@keyframes fadeSlideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.rb-section-manager-hint {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.rb-section-manager-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.rb-sm-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: grab;
-  transition: all 0.15s ease;
-  user-select: none;
-}
-.rb-sm-item:hover {
-  border-color: #a5b4fc;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
-  transform: translateX(2px);
-}
-.rb-sm-item:active {
-  cursor: grabbing;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-  transform: scale(1.01);
-}
-.rb-sm-item--hidden {
-  opacity: 0.45;
-  background: #f8fafc;
-}
-
-.rb-sm-grip {
-  color: #cbd5e1;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-.rb-sm-item:hover .rb-sm-grip {
-  color: #94a3b8;
-}
-
-.rb-sm-icon {
-  color: #64748b;
-  flex-shrink: 0;
-}
-
-.rb-sm-label {
-  flex: 1;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #334155;
-}
-
-.rb-sm-eye {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-.rb-sm-eye:hover {
-  background: #e0e7ff;
-  color: #4338ca;
-}
-.rb-sm-eye--off {
-  color: #cbd5e1;
-}
-.rb-sm-eye--off:hover {
-  background: #fef3c7;
-  color: #d97706;
-}
-
 /* ---- Responsive ---- */
 @media (max-width: 1100px) {
   .rb-page {
     height: auto;
     overflow-y: auto;
   }
-
   .rb-main {
     height: auto;
     grid-template-columns: 1fr;
     padding: 16px;
     overflow: visible;
   }
-
   .rb-right-col {
     display: none;
   }
-
   .rb-left-col {
     height: auto;
     overflow-y: visible;
     padding-bottom: 60px;
   }
-
   .rb-header-center {
     display: none;
   }

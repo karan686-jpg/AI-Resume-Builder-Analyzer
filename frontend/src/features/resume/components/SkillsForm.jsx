@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { Plus, X } from "lucide-react";
+import { Button, Badge } from "../../../components/ui";
 
-const SkillsForm = ({ skills, onChange }) => {
+const SkillsForm = ({ skills = [], onChange }) => {
   const [skillInput, setSkillInput] = useState("");
 
   const handleAddSkill = (e) => {
     e.preventDefault();
-    if (skillInput.trim() && !skills.includes(skillInput.trim())) {
-      onChange([...skills, skillInput.trim()]);
+    const trimmed = skillInput.trim();
+    if (trimmed && !skills.includes(trimmed)) {
+      onChange([...skills, trimmed]);
       setSkillInput("");
     }
   };
@@ -17,40 +19,45 @@ const SkillsForm = ({ skills, onChange }) => {
   };
 
   return (
-    <div className="space-y-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Skills</h2>
+    <div className="space-y-6 bg-white p-6 rounded-xl shadow-xs border border-gray-100">
+      <h2 className="text-xl font-bold text-gray-800">Skills</h2>
 
-      <form onSubmit={handleAddSkill} className="flex space-x-2">
+      <form onSubmit={handleAddSkill} className="flex gap-2">
         <input
           type="text"
           value={skillInput}
           onChange={(e) => setSkillInput(e.target.value)}
-          placeholder="Add a skill (e.g. React.js)"
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+          placeholder="Add a skill (e.g. React.js, Node.js)"
+          className="flex-1 text-xs px-3.5 py-2 bg-white border border-slate-300 rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
         />
-        <button
+        <Button
           type="submit"
+          variant="dark"
+          size="sm"
           disabled={!skillInput.trim()}
-          className="flex items-center text-sm px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-all"
         >
-          <Plus size={16} className="mr-1" /> Add
-        </button>
+          <Plus size={15} /> Add
+        </Button>
       </form>
 
       <div className="flex flex-wrap gap-2 mt-4">
         {skills.map((skill, index) => (
-          <div
+          <Badge
             key={index}
-            className="flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full border border-blue-200 text-sm font-medium"
+            variant="info"
+            size="md"
+            className="flex items-center gap-1.5"
           >
             {skill}
             <button
+              type="button"
               onClick={() => handleRemoveSkill(skill)}
-              className="ml-2 text-blue-400 hover:text-blue-800 transition-colors outline-none"
+              className="text-blue-500 hover:text-rose-600 transition-colors cursor-pointer"
+              title="Remove skill"
             >
-              <X size={14} />
+              <X size={13} />
             </button>
-          </div>
+          </Badge>
         ))}
       </div>
     </div>

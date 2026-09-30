@@ -12,14 +12,14 @@ app.use(cors({
 
 const authRouter= require("./routes/auth.routes");
 const interviewRouter= require("./routes/interview.routes");
-const aiRouter = require("./routes/ai.routes");
-const imagekitRouter = require("./routes/imagekit.routes");
 const resumeRouter = require("./routes/resume.routes");
 
 app.use("/api/auth", authRouter);
 app.use("/api/interview",interviewRouter);
-app.use("/api/ai", aiRouter);
-app.use("/api/imagekit", imagekitRouter);
 app.use("/api/resume", resumeRouter);
+
+// Centralized error handling middleware
+const errorHandler = require("./middleware/error.middleware");
+app.use(errorHandler);
 
 module.exports=app;

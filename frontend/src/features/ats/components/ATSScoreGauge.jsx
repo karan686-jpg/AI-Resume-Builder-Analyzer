@@ -1,4 +1,5 @@
 import React from "react";
+import { Badge } from "../../../components/ui";
 
 const ATSScoreGauge = ({ score = 0, size = 130 }) => {
   const strokeWidth = 10;
@@ -9,16 +10,16 @@ const ATSScoreGauge = ({ score = 0, size = 130 }) => {
 
   let color = "#ef4444"; // Red
   let label = "Needs Optimization";
-  let badgeBg = "bg-rose-50 text-rose-700 border-rose-200";
+  let badgeVariant = "danger";
 
   if (safeScore >= 80) {
     color = "#10b981"; // Emerald
     label = "Strong ATS Match";
-    badgeBg = "bg-emerald-50 text-emerald-700 border-emerald-200";
+    badgeVariant = "success";
   } else if (safeScore >= 60) {
     color = "#f59e0b"; // Amber
     label = "Good Potential";
-    badgeBg = "bg-amber-50 text-amber-700 border-amber-200";
+    badgeVariant = "warning";
   }
 
   return (
@@ -62,11 +63,9 @@ const ATSScoreGauge = ({ score = 0, size = 130 }) => {
         </div>
       </div>
 
-      <span
-        className={`mt-2.5 px-2.5 py-0.5 text-xs font-bold rounded-full border ${badgeBg}`}
-      >
+      <Badge variant={badgeVariant} className="mt-2.5 font-bold">
         {label}
-      </span>
+      </Badge>
     </div>
   );
 };

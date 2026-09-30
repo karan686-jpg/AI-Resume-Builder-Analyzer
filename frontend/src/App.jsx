@@ -1,4 +1,3 @@
-import "./App.scss";
 import { router } from "./app.routes";
 import { RouterProvider } from "react-router";
 import { AuthProvider } from "./features/auth/auth.context";

@@ -1,23 +1,8 @@
-import React, { useState } from "react";
-import { enhanceSummary } from "../services/resume.api";
-import { Sparkles, Loader2 } from "lucide-react";
+import React, { useRef } from "react";
+import FormatToolbar from "./FormatToolbar";
 
 const ProfessionalSummaryForm = ({ summary, onChange }) => {
-  const [isEnhancing, setIsEnhancing] = useState(false);
-
-  const handleEnhance = async () => {
-    if (!summary || summary.trim().length < 10) return;
-
-    setIsEnhancing(true);
-    try {
-      const improvedText = await enhanceSummary(summary);
-      onChange(improvedText);
-    } catch (error) {
-      console.error("Failed to enhance summary", error);
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
+  const textareaRef = useRef(null);
 
   return (
     <div className="space-y-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -25,26 +10,18 @@ const ProfessionalSummaryForm = ({ summary, onChange }) => {
         <h2 className="text-xl font-semibold text-gray-800">
           Professional Summary
         </h2>
-        <button
-          onClick={handleEnhance}
-          disabled={isEnhancing || !summary}
-          className="flex items-center text-sm px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 transition-all"
-        >
-          {isEnhancing ? (
-            <Loader2 className="animate-spin mr-2" size={16} />
-          ) : (
-            <Sparkles className="mr-2" size={16} />
-          )}
-          {isEnhancing ? "Enhancing..." : "Enhance with AI"}
-        </button>
       </div>
 
       <p className="text-sm text-gray-500">
-        Write a short draft of your professional summary, then click the AI
-        button to polish it.
+        Write a concise, impactful 2-3 sentence summary highlighting your core expertise and career achievements.
       </p>
 
+      <div className="flex justify-between items-center">
+        <FormatToolbar textareaRef={textareaRef} value={summary} onChange={onChange} />
+      </div>
+
       <textarea
+        ref={textareaRef}
         rows="5"
         value={summary}
         onChange={(e) => onChange(e.target.value)}

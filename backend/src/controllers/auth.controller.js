@@ -1,5 +1,4 @@
 const userModel = require("../models/user.model");
-const tokenBlacklistModel = require("../models/blacklist.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -93,15 +92,6 @@ const loginUserConroller = async (req, res) => {
 // 3. LOGOUT - Log out the user
 const logoutUserConroller = async (req, res) => {
     try {
-        const token = req.cookies.token;
-
-        if (!token) {
-            return res.status(400).json({ message: "No token found" });
-        }
-
-        // Add token to blacklist so it can't be used again
-        await tokenBlacklistModel.create({ token });
-
         // Clear the cookie from browser
         res.clearCookie("token");
 

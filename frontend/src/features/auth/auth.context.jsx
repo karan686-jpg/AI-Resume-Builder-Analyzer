@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect } from "react";
 import { getMe } from "./services/auth.api.services.js";
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -7,6 +8,12 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     const fetchUser = async () => {
       try {
         setLoading(true);

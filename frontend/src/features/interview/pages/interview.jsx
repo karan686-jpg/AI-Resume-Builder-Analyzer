@@ -1,148 +1,17 @@
 import React, { useState, useEffect } from "react";
-import "../../../style/interview.scss";
 import { useInterview } from "../hooks/useInterview.js";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
+import { LoadingScreen } from "../../../components/ui/LoadingScreen";
+import QuestionSection from "../components/QuestionSection";
+import RoadmapDayCard from "../components/RoadmapDayCard";
+import { Code2, Users, Compass, Download } from "lucide-react";
 
 const NAV_ITEMS = [
-  {
-    id: "technical",
-    label: "Technical Questions",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <polyline points="16 18 22 12 16 6" />
-        <polyline points="8 6 2 12 8 18" />
-      </svg>
-    ),
-  },
-  {
-    id: "behavioral",
-    label: "Behavioral Questions",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-    ),
-  },
-  {
-    id: "roadmap",
-    label: "Road Map",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <polygon points="3 11 22 2 13 21 11 13 3 11" />
-      </svg>
-    ),
-  },
+  { id: "technical", label: "Technical Questions", icon: Code2 },
+  { id: "behavioral", label: "Behavioral Questions", icon: Users },
+  { id: "roadmap", label: "Road Map", icon: Compass },
 ];
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-const QuestionCard = ({ item, index }) => {
-  const [open, setOpen] = useState(false);
-  if (!item) return null;
-
-  const question = item.question || item.title || (typeof item === "string" ? item : `Question ${index + 1}`);
-  const intention = item.intention || item.reason || "Evaluate technical proficiency and domain understanding.";
-  const answer = item.answer || item.modelAnswer || "";
-
-  return (
-    <div className="q-card">
-      <div className="q-card__header" onClick={() => setOpen((o) => !o)}>
-        <span className="q-card__index">Q{index + 1}</span>
-        <p className="q-card__question">{question}</p>
-        <span
-          className={`q-card__chevron ${open ? "q-card__chevron--open" : ""}`}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </span>
-      </div>
-      {open && (
-        <div className="q-card__body">
-          <div className="q-card__section">
-            <span className="q-card__tag q-card__tag--intention">
-              Intention
-            </span>
-            <p>{intention}</p>
-          </div>
-          {answer && (
-            <div className="q-card__section">
-              <span className="q-card__tag q-card__tag--answer">
-                Model Answer
-              </span>
-              <p>{answer}</p>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const RoadMapDay = ({ day, index = 0 }) => {
-  if (!day) return null;
-  const dayNumber = day.day || index + 1;
-  const dayFocus = day.focus || day.title || "Key Concepts & Review";
-  const tasks = Array.isArray(day.tasks) ? day.tasks : [];
-
-  return (
-    <div className="roadmap-day">
-      <div className="roadmap-day__header">
-        <span className="roadmap-day__badge">Day {dayNumber}</span>
-        <h3 className="roadmap-day__focus">{dayFocus}</h3>
-      </div>
-      <ul className="roadmap-day__tasks">
-        {tasks.map((task, i) => (
-          <li key={i}>
-            <span className="roadmap-day__bullet" />
-            {typeof task === "string" ? task : task?.task || JSON.stringify(task)}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
-// ── Main Component ────────────────────────────────────────────────────────────
 const Interview = () => {
   const [activeNav, setActiveNav] = useState("technical");
   const { report, getReportById, loading, getResumePdf } = useInterview();
@@ -152,124 +21,86 @@ const Interview = () => {
     if (interviewId) {
       getReportById(interviewId);
     }
-  }, [interviewId]);
+  }, [interviewId, getReportById]);
 
   if (loading || !report) {
-    return (
-      <main className="loading-screen">
-        <h1>Loading your interview plan...</h1>
-      </main>
-    );
+    return <LoadingScreen message="Loading your customized interview plan..." />;
   }
 
-  const scoreColor =
-    report.matchScore >= 80
-      ? "score--high"
-      : report.matchScore >= 60
-        ? "score--mid"
-        : "score--low";
+  const scoreHigh = report.matchScore >= 80;
+  const scoreMid = report.matchScore >= 60 && report.matchScore < 80;
 
   return (
-    <div className="interview-page">
-      <div className="interview-layout">
+    <div className="min-h-screen bg-[#09090e] text-white p-4 sm:p-8 font-sans selection:bg-pink-500 selection:text-white">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[240px_1fr_280px] gap-6 p-6 sm:p-8 bg-white/[0.02] border border-white/10 rounded-3xl backdrop-blur-xl shadow-2xl">
         {/* ── Left Nav ── */}
-        <nav className="interview-nav">
-          <div className="nav-content">
-            <p className="interview-nav__label">Sections</p>
-            {NAV_ITEMS.map((item) => (
-              <button
-                key={item.id}
-                className={`interview-nav__item ${activeNav === item.id ? "interview-nav__item--active" : ""}`}
-                onClick={() => setActiveNav(item.id)}
-              >
-                <span className="interview-nav__icon">{item.icon}</span>
-                {item.label}
-              </button>
-            ))}
+        <nav className="flex flex-col justify-between gap-6">
+          <div>
+            <p className="text-[10px] font-bold tracking-wider uppercase text-slate-400 mb-3 px-1">
+              Sections
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                      activeNav === item.id
+                        ? "bg-gradient-to-r from-pink-500/15 to-rose-500/15 border border-pink-500/30 text-pink-300 font-semibold shadow-sm"
+                        : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
+                    }`}
+                    onClick={() => setActiveNav(item.id)}
+                  >
+                    <Icon size={16} className="flex-shrink-0" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
           <button
-            onClick={() => {
-              getResumePdf(interviewId);
-            }}
-            className="button primary-button"
+            onClick={() => getResumePdf(interviewId)}
+            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white text-xs font-semibold rounded-xl shadow-lg shadow-pink-500/25 transition-all cursor-pointer"
           >
-            <svg
-              height={"0.8rem"}
-              style={{ marginRight: "0.8rem" }}
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M10.6144 17.7956 11.492 15.7854C12.2731 13.9966 13.6789 12.5726 15.4325 11.7942L17.8482 10.7219C18.6162 10.381 18.6162 9.26368 17.8482 8.92277L15.5079 7.88394C13.7092 7.08552 12.2782 5.60881 11.5105 3.75894L10.6215 1.61673C10.2916.821765 9.19319.821767 8.8633 1.61673L7.97427 3.75892C7.20657 5.60881 5.77553 7.08552 3.97685 7.88394L1.63658 8.92277C.868537 9.26368.868536 10.381 1.63658 10.7219L4.0523 11.7942C5.80589 12.5726 7.21171 13.9966 7.99275 15.7854L8.8704 17.7956C9.20776 18.5682 10.277 18.5682 10.6144 17.7956ZM19.4014 22.6899 19.6482 22.1242C20.0882 21.1156 20.8807 20.3125 21.8695 19.8732L22.6299 19.5353C23.0412 19.3526 23.0412 18.7549 22.6299 18.5722L21.9121 18.2532C20.8978 17.8026 20.0911 16.9698 19.6586 15.9269L19.4052 15.3156C19.2285 14.8896 18.6395 14.8896 18.4628 15.3156L18.2094 15.9269C17.777 16.9698 16.9703 17.8026 15.956 18.2532L15.2381 18.5722C14.8269 18.7549 14.8269 19.3526 15.2381 19.5353L15.9985 19.8732C16.9874 20.3125 17.7798 21.1156 18.2198 22.1242L18.4667 22.6899C18.6473 23.104 19.2207 23.104 19.4014 22.6899Z"></path>
-            </svg>
+            <Download size={14} />
             Download Resume
           </button>
         </nav>
 
-        <div className="interview-divider" />
-
         {/* ── Center Content ── */}
-        <main className="interview-content">
+        <main className="min-w-0 border-t lg:border-t-0 lg:border-x border-white/10 lg:px-6 pt-6 lg:pt-0">
           {activeNav === "technical" && (
-            <section>
-              <div className="content-header">
-                <h2>Technical Questions</h2>
-                <span className="content-header__count">
-                  {(report.technicalQuestions || []).filter(Boolean).length} questions
-                </span>
-              </div>
-              <div className="q-list">
-                {(report.technicalQuestions || []).filter(Boolean).length === 0 ? (
-                  <p style={{ color: "#64748b", padding: "1rem" }}>No technical questions recorded yet.</p>
-                ) : (
-                  (report.technicalQuestions || [])
-                    .filter(Boolean)
-                    .map((q, i) => (
-                      <QuestionCard key={i} item={q} index={i} />
-                    ))
-                )}
-              </div>
-            </section>
+            <QuestionSection
+              title="Technical Questions"
+              questions={report.technicalQuestions}
+            />
           )}
 
           {activeNav === "behavioral" && (
-            <section>
-              <div className="content-header">
-                <h2>Behavioral Questions</h2>
-                <span className="content-header__count">
-                  {(report.behavioralQuestions || []).filter(Boolean).length} questions
-                </span>
-              </div>
-              <div className="q-list">
-                {(report.behavioralQuestions || []).filter(Boolean).length === 0 ? (
-                  <p style={{ color: "#64748b", padding: "1rem" }}>No behavioral questions recorded yet.</p>
-                ) : (
-                  (report.behavioralQuestions || [])
-                    .filter(Boolean)
-                    .map((q, i) => (
-                      <QuestionCard key={i} item={q} index={i} />
-                    ))
-                )}
-              </div>
-            </section>
+            <QuestionSection
+              title="Behavioral Questions"
+              questions={report.behavioralQuestions}
+            />
           )}
 
           {activeNav === "roadmap" && (
             <section>
-              <div className="content-header">
-                <h2>Preparation Road Map</h2>
-                <span className="content-header__count">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10">
+                <h2 className="text-lg font-bold text-white tracking-tight">Preparation Road Map</h2>
+                <span className="text-xs font-mono text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
                   {(report.preparationPlan || []).filter(Boolean).length}-day plan
                 </span>
               </div>
-              <div className="roadmap-list">
+              <div>
                 {(report.preparationPlan || []).filter(Boolean).length === 0 ? (
-                  <p style={{ color: "#64748b", padding: "1rem" }}>No preparation plan recorded yet.</p>
+                  <p className="text-xs text-slate-500 p-4">No preparation plan recorded yet.</p>
                 ) : (
                   (report.preparationPlan || [])
                     .filter(Boolean)
                     .map((day, i) => (
-                      <RoadMapDay key={day.day || i} day={day} index={i} />
+                      <RoadmapDayCard key={day.day || i} day={day} index={i} />
                     ))
                 )}
               </div>
@@ -277,35 +108,49 @@ const Interview = () => {
           )}
         </main>
 
-        <div className="interview-divider" />
-
         {/* ── Right Sidebar ── */}
-        <aside className="interview-sidebar">
+        <aside className="flex flex-col gap-6 border-t lg:border-t-0 pt-6 lg:pt-0">
           {/* Match Score */}
-          <div className="match-score">
-            <p className="match-score__label">Match Score</p>
-            <div className={`match-score__ring ${scoreColor}`}>
-              <span className="match-score__value">{report.matchScore ?? 75}</span>
-              <span className="match-score__pct">%</span>
+          <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 flex flex-col items-center text-center">
+            <p className="text-[10px] font-bold tracking-wider uppercase text-slate-400 mb-3">Match Score</p>
+            <div
+              className={`w-24 h-24 rounded-full border-4 flex items-center justify-center mb-3 shadow-lg ${
+                scoreHigh
+                  ? "border-emerald-500 text-emerald-400 shadow-emerald-500/10"
+                  : scoreMid
+                  ? "border-amber-500 text-amber-400 shadow-amber-500/10"
+                  : "border-rose-500 text-rose-400 shadow-rose-500/10"
+              }`}
+            >
+              <span className="text-3xl font-extrabold font-mono">{report.matchScore ?? 75}</span>
+              <span className="text-sm font-bold ml-0.5">%</span>
             </div>
-            <p className="match-score__sub">
-              {report.matchScore >= 80 ? "Strong match for this role" : report.matchScore >= 60 ? "Moderate match — review gaps below" : "Needs preparation"}
+            <p className="text-xs text-slate-400">
+              {scoreHigh
+                ? "Strong match for this role"
+                : scoreMid
+                ? "Moderate match — review gaps below"
+                : "Needs preparation"}
             </p>
           </div>
 
-          <div className="sidebar-divider" />
-
           {/* Skill Gaps */}
-          <div className="skill-gaps">
-            <p className="skill-gaps__label">Skill Gaps</p>
-            <div className="skill-gaps__list">
+          <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10">
+            <p className="text-[10px] font-bold tracking-wider uppercase text-slate-400 mb-3">Skill Gaps</p>
+            <div>
               {(report.skillGaps || []).filter(Boolean).length === 0 ? (
-                <span style={{ fontSize: "13px", color: "#64748b" }}>None identified</span>
+                <span className="text-xs text-slate-500">None identified</span>
               ) : (
                 (report.skillGaps || []).filter(Boolean).map((gap, i) => (
                   <span
                     key={i}
-                    className={`skill-tag skill-tag--${gap.severity || "medium"}`}
+                    className={`inline-block text-[11px] font-medium px-2.5 py-1 rounded-lg border mr-1.5 mb-1.5 ${
+                      gap.severity === "high"
+                        ? "text-rose-300 bg-rose-500/10 border-rose-500/30"
+                        : gap.severity === "low"
+                        ? "text-blue-300 bg-blue-500/10 border-blue-500/30"
+                        : "text-amber-300 bg-amber-500/10 border-amber-500/30"
+                    }`}
                     title={gap.description || ""}
                   >
                     {gap.skillName || gap.skill || gap.name || "Skill Gap"}

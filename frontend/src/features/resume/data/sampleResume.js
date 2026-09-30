@@ -20,7 +20,9 @@ export const SAMPLE_RESUME = {
     {
       id: "exp-1",
       company: "TechNova Solutions",
+      role: "Software Engineer",
       position: "Software Engineer",
+      dates: "2023 - Present",
       startDate: "2023-07",
       endDate: "",
       currentlyWorking: true,
@@ -31,7 +33,9 @@ export const SAMPLE_RESUME = {
     {
       id: "exp-2",
       company: "Freelance",
+      role: "Full Stack Developer",
       position: "Full Stack Developer",
+      dates: "2022 - 2023",
       startDate: "2022-01",
       endDate: "2023-06",
       currentlyWorking: false,
@@ -46,6 +50,7 @@ export const SAMPLE_RESUME = {
       institution: "University of Engineering & Management",
       degree: "B.Tech",
       fieldOfStudy: "Computer Science & Engineering",
+      dates: "2019 - 2023",
       startDate: "2019-08",
       endDate: "2023-06",
       grade: "8.7 CGPA",

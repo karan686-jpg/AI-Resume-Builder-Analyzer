@@ -2,8 +2,7 @@ import React from "react";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 
 /**
- * Enterprise-grade React Error Boundary to catch render-time exceptions
- * and prevent the dreaded "White Screen of Death" during user demos and evaluations.
+ * Application error boundary to catch render-time exceptions and show fallback UI.
  */
 class ErrorBoundary extends React.Component {
   constructor(props) {

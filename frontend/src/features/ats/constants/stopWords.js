@@ -1,4 +1,4 @@
-// English stop words to filter out grammatical connector words
+// English stop words and generic job posting filler words
 export const STOP_WORDS = new Set([
   "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
   "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being",
@@ -19,5 +19,8 @@ export const STOP_WORDS = new Set([
   "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's",
   "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd",
   "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves",
-  "will", "shall", "may", "might", "must", "also", "including", "across", "well"
+  "will", "shall", "may", "might", "must", "also", "including", "across", "well",
+  // Common generic job posting filler words
+  "looking", "plus", "proficient", "seeking", "hiring", "required", "strong",
+  "skills", "experience", "role", "candidate", "responsibilities", "qualifications"
 ]);
