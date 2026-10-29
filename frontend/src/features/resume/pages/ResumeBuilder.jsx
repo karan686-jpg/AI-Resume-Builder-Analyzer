@@ -1,53 +1,17 @@
-import React, { useState, useEffect } from "react";
-import PersonalInfoForm from "../components/PersonalInfoForm";
-import ProfessionalSummaryForm from "../components/ProfessionalSummaryForm";
-import ExperienceForm from "../components/ExperienceForm";
-import EducationForm from "../components/EducationForm";
-import SkillsForm from "../components/SkillsForm";
-import ResumePreview from "../components/ResumePreview";
-import {
-  ChevronLeft,
-  Save,
-  Check,
-  Loader2,
-  User,
-  FileText,
-  Briefcase,
-  GraduationCap,
-  Wrench,
-  Layers,
-  Zap,
-  FlaskConical,
-  Download,
-} from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import ATSScannerModal from "../../ats/components/ATSScannerModal";
-import { saveResume, updateResume, getResumeById } from "../services/resume.api";
+import { calculateATSScore } from "../../ats/utils/atsEngine";
+import { saveResume, updateResume, getResumeById } from "../../../services/apiClient";
 import { SAMPLE_RESUME } from "../data/sampleResume";
-import "./ResumeBuilder.css";
 
-// ─── Section registry ──────────────────────────────────────────────────────────
-const ALL_SECTIONS = [
-  { id: "personal",   label: "Personal Info", icon: User          },
-  { id: "summary",    label: "Summary",       icon: FileText      },
-  { id: "experience", label: "Experience",    icon: Briefcase     },
-  { id: "education",  label: "Education",     icon: GraduationCap },
-  { id: "skills",     label: "Skills",        icon: Wrench        },
-];
-
-
-// ─── Main ResumeBuilder ────────────────────────────────────────────────────────
-const ResumeBuilder = () => {
+export const ResumeBuilder = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const resumeId = searchParams.get("id");
 
-  // Master resume state
+  // ── Master Resume State ───────────────────────────────────────────────────
   const [resumeData, setResumeData] = useState({
-    title: "My Professional Resume",
-    themeColor: "#2563eb",
-    fontFamily: "'Inter', sans-serif",
-    alignment: "left",
+    title: "My Technical Resume",
     personalInfo: {
       name: "",
       title: "",
@@ -55,201 +19,607 @@ const ResumeBuilder = () => {
       phone: "",
       linkedIn: "",
       github: "",
-      portfolio: "",
-      imageUrl: "",
     },
+    professionalSummary: "",
     experience: [],
     education: [],
     skills: [],
+    customSections: [],
   });
 
-  const [template, setTemplate] = useState("modern");
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
   const [currentResumeId, setCurrentResumeId] = useState(resumeId);
-  const [activeTab, setActiveTab] = useState("all");
-  const [isAtsModalOpen, setIsAtsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+  const [activeTab, setActiveTab] = useState("editor"); // "editor" | "ats"
 
-  // Load existing resume
+  // ── Target Job Description for In-Browser ATS Heuristic Engine ────────────
+  const [jobDescription, setJobDescription] = useState(
+    "Looking for a Full Stack Developer proficient in React, Node.js, Express, MongoDB, and REST APIs. Experience with Docker, Redis, CI/CD, and automated unit testing is a plus."
+  );
+  const [atsResult, setAtsResult] = useState(() => calculateATSScore(resumeData, jobDescription));
+
+  // Load existing resume if editing by ID
   useEffect(() => {
     if (resumeId) {
-      const loadResume = async () => {
-        try {
-          const fetched = await getResumeById(resumeId);
-          if (fetched) {
-            setResumeData((prev) => ({ ...prev, ...fetched, personalInfo: fetched.personalInfo || prev.personalInfo }));
-            if (fetched.activeTemplate) setTemplate(fetched.activeTemplate);
-            setCurrentResumeId(fetched._id);
-          }
-        } catch (err) { console.error("Failed to load resume:", err); }
-      };
-      loadResume();
+      getResumeById(resumeId).then((fetched) => {
+        if (fetched) {
+          setResumeData((prev) => ({
+            ...prev,
+            ...fetched,
+            personalInfo: fetched.personalInfo || prev.personalInfo,
+          }));
+          setCurrentResumeId(fetched._id);
+        }
+      }).catch(console.error);
     }
   }, [resumeId]);
 
-  // Helpers
-  const updatePersonalInfo = (data) => setResumeData((p) => ({ ...p, personalInfo: data }));
-  const updateSummary     = (text) => setResumeData((p) => ({ ...p, professionalSummary: text }));
-  const updateExperience  = (list) => setResumeData((p) => ({ ...p, experience: list }));
-  const updateEducation   = (list) => setResumeData((p) => ({ ...p, education: list }));
-  const updateSkills = (list) => setResumeData((p) => ({ ...p, skills: list }));
+  // ── Persistent Web Worker Lifecycle (Zero Main-Thread Blocking) ───────────
+  const workerRef = useRef(null);
 
-  // Sample data
-  const handleLoadSample = () => {
-    if (window.confirm("This will replace all current data with sample data. Continue?")) {
-      const { title, themeColor, fontFamily, alignment, spacing, ...rest } = SAMPLE_RESUME;
-      setResumeData({ title, themeColor, fontFamily, alignment, spacing, ...rest });
-    }
-  };
-
-  // Save to cloud
-  const handleSaveToCloud = async () => {
+  // Initialize the worker thread once on mount, terminate on unmount
+  useEffect(() => {
     try {
-      setIsSaving(true);
-      setSaveSuccess(false);
-      const payload = { ...resumeData, activeTemplate: template };
-      if (currentResumeId) {
-        await updateResume(currentResumeId, payload);
-      } else {
-        const response = await saveResume(payload);
-        if (response?.resume?._id) setCurrentResumeId(response.resume._id);
+      workerRef.current = new Worker(
+        new URL("../../ats/workers/ats.worker.js", import.meta.url),
+        { type: "module" }
+      );
+      workerRef.current.onmessage = (event) => {
+        if (event.data?.success) {
+          setAtsResult(event.data.result);
+        }
+      };
+      workerRef.current.onerror = () => {
+        workerRef.current = null;
+      };
+    } catch {
+      workerRef.current = null;
+    }
+
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
       }
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      console.error("Save error:", err);
-      alert("Failed to save resume. Please make sure you are logged in!");
-    } finally { setIsSaving(false); }
+    };
+  }, []);
+
+  // Debounced message dispatch to persistent worker thread on input changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (workerRef.current) {
+        workerRef.current.postMessage({ resumeData, jobDescription });
+      } else {
+        setAtsResult(calculateATSScore(resumeData, jobDescription));
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [resumeData, jobDescription]);
+
+  // Quick Load Demo Sample Data
+  const handleLoadSample = () => {
+    const { title, personalInfo, professionalSummary, experience, education, skills, customSections } = SAMPLE_RESUME;
+    setResumeData({ title, personalInfo, professionalSummary, experience, education, skills, customSections: customSections || [] });
   };
 
-  const handlePrint = () => window.print();
-
-  // Render section by id
-  const renderSection = (id) => {
-    switch (id) {
-      case "personal":
-        return <div id="sec-personal" key="personal" className="rb-section-card"><PersonalInfoForm data={resumeData.personalInfo} onChange={updatePersonalInfo} /></div>;
-      case "summary":
-        return <div id="sec-summary" key="summary" className="rb-section-card"><ProfessionalSummaryForm summary={resumeData.professionalSummary} onChange={updateSummary} /></div>;
-      case "experience":
-        return <div id="sec-experience" key="experience" className="rb-section-card"><ExperienceForm experienceList={resumeData.experience} onChange={updateExperience} /></div>;
-      case "education":
-        return <div id="sec-education" key="education" className="rb-section-card"><EducationForm educationList={resumeData.education} onChange={updateEducation} /></div>;
-      case "skills":
-        return <div id="sec-skills" key="skills" className="rb-section-card"><SkillsForm skills={resumeData.skills} onChange={updateSkills} /></div>;
-      default: return null;
+  // Cloud Save
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveMsg("");
+    try {
+      if (currentResumeId) {
+        await updateResume(currentResumeId, resumeData);
+      } else {
+        const res = await saveResume(resumeData);
+        if (res?.resume?._id) setCurrentResumeId(res.resume._id);
+      }
+      setSaveMsg("Saved!");
+      setTimeout(() => setSaveMsg(""), 2000);
+    } catch {
+      alert("Save failed. Ensure you are logged in.");
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  // Skill Add / Remove
+  const [skillInput, setSkillInput] = useState("");
+  const handleAddSkill = (e) => {
+    e.preventDefault();
+    const trimmed = skillInput.trim();
+    if (trimmed && !resumeData.skills.includes(trimmed)) {
+      setResumeData((prev) => ({ ...prev, skills: [...prev.skills, trimmed] }));
+      setSkillInput("");
+    }
+  };
+  const handleRemoveSkill = (skill) => {
+    setResumeData((prev) => ({ ...prev, skills: prev.skills.filter((s) => s !== skill) }));
+  };
+
+  // Experience Add / Remove / Edit (Immutable functional updates)
+  const handleAddExp = () => {
+    setResumeData((prev) => ({
+      ...prev,
+      experience: [...prev.experience, { company: "", role: "", dates: "", description: "" }],
+    }));
+  };
+  const handleExpChange = (idx, field, val) => {
+    setResumeData((prev) => ({
+      ...prev,
+      experience: prev.experience.map((item, i) =>
+        i === idx ? { ...item, [field]: val } : item
+      ),
+    }));
+  };
+  const handleRemoveExp = (idx) => {
+    setResumeData((prev) => ({
+      ...prev,
+      experience: prev.experience.filter((_, i) => i !== idx),
+    }));
+  };
+
+  // Education Add / Remove / Edit (Immutable functional updates)
+  const handleAddEdu = () => {
+    setResumeData((prev) => ({
+      ...prev,
+      education: [...prev.education, { institution: "", degree: "", fieldOfStudy: "", dates: "" }],
+    }));
+  };
+  const handleEduChange = (idx, field, val) => {
+    setResumeData((prev) => ({
+      ...prev,
+      education: prev.education.map((item, i) =>
+        i === idx ? { ...item, [field]: val } : item
+      ),
+    }));
+  };
+  const handleRemoveEdu = (idx) => {
+    setResumeData((prev) => ({
+      ...prev,
+      education: prev.education.filter((_, i) => i !== idx),
+    }));
+  };
+
 
   return (
-    <div className="rb-page">
-      {/* ── Premium Top Navbar ── */}
-      <header className="rb-header">
-        <div className="rb-header-left">
-          <button className="rb-back-btn" onClick={() => navigate("/dashboard")} title="Back to Dashboard">
-            <ChevronLeft size={18} />
+    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col">
+      {/* ── Top Header ── */}
+      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-xs print:hidden">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="text-xs text-slate-500 hover:text-slate-900 border border-slate-200 px-2.5 py-1 rounded-md cursor-pointer"
+          >
+            ← Workspace
           </button>
-          <div className="rb-brand">
-            <span className="rb-brand-icon">✦</span>
-            <span className="rb-brand-name">ResumeAI Studio</span>
-          </div>
-          <div className="rb-title-divider" />
           <input
             type="text"
-            className="rb-title-input"
             value={resumeData.title}
             onChange={(e) => setResumeData((p) => ({ ...p, title: e.target.value }))}
-            placeholder="Resume Title"
+            className="text-xs font-bold text-slate-800 bg-transparent border-b border-dashed border-slate-300 outline-none px-1"
           />
         </div>
 
+        <div className="flex items-center gap-2">
+          {/* Load Sample Demo */}
+          <button
+            onClick={handleLoadSample}
+            className="text-xs px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg hover:bg-amber-100 font-semibold cursor-pointer"
+          >
+            Sample Data
+          </button>
 
+          {/* Save to Cloud */}
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="text-xs px-3.5 py-1.5 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 cursor-pointer disabled:opacity-50"
+          >
+            {isSaving ? "Saving..." : saveMsg || "Save"}
+          </button>
 
-        <div className="rb-header-right">
-          {/* Sample Data */}
-          <button className="rb-action-btn rb-sample-btn" onClick={handleLoadSample} title="Load Sample Data">
-            <FlaskConical size={14} />
-            <span>Sample</span>
-          </button>
-          {/* ATS */}
-          <button className="rb-action-btn rb-ats-btn" onClick={() => setIsAtsModalOpen(true)} title="ATS Score">
-            <Zap size={14} className="text-amber-500 fill-amber-500" />
-            <span>ATS</span>
-          </button>
-          {/* Save */}
-          <button onClick={handleSaveToCloud} disabled={isSaving} className={`rb-action-btn rb-save-btn ${saveSuccess ? "saved" : ""}`}>
-            {isSaving ? <Loader2 size={15} className="animate-spin" /> : saveSuccess ? <Check size={15} /> : <Save size={15} />}
-            <span>{isSaving ? "Saving..." : saveSuccess ? "Saved!" : "Save"}</span>
-          </button>
-          {/* Export PDF */}
-          <button className="rb-action-btn rb-download-btn" onClick={handlePrint} title="Export PDF / Print">
-            <Download size={15} />
-            <span>Export PDF</span>
+          {/* Print / PDF Export */}
+          <button
+            onClick={() => window.print()}
+            className="text-xs px-3.5 py-1.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-500 cursor-pointer"
+          >
+            Print PDF
           </button>
         </div>
       </header>
 
-      {/* ── Main Layout ── */}
-      <main className="rb-main">
-        {/* Left panel */}
-        <div className="rb-left-col">
-
-          {/* Section Navigation Tabs */}
-          <div className="rb-tabs-nav">
-            {[{ id: "all", label: "All", icon: Layers }, ...ALL_SECTIONS].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              let badge = null;
-              if (tab.id === "skills" && resumeData.skills.length > 0) badge = resumeData.skills.length;
-              else if (tab.id === "experience" && resumeData.experience.length > 0) badge = resumeData.experience.length;
-              else if (tab.id === "education" && resumeData.education.length > 0) badge = resumeData.education.length;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    if (tab.id !== "all") {
-                      setTimeout(() => {
-                        const el = document.getElementById(`sec-${tab.id}`);
-                        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-                      }, 50);
-                    }
-                  }}
-                  className={`rb-tab-btn ${isActive ? "active" : ""}`}
-                >
-                  <Icon size={14} />
-                  <span>{tab.label}</span>
-                  {badge && <span className="rb-tab-badge">{badge}</span>}
-                </button>
-              );
-            })}
+      {/* ── Main Layout: Editor & Live Preview ── */}
+      <main className="flex-1 max-w-[1550px] w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6 print:block print:p-0">
+        {/* Left Column: Form Editor & Embedded Web Worker ATS */}
+        <div className="space-y-4 print:hidden">
+          {/* Tab Selector: Resume Form vs ATS Scanner */}
+          <div className="flex gap-2 border-b border-slate-200 pb-2">
+            <button
+              onClick={() => setActiveTab("editor")}
+              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                activeTab === "editor" ? "bg-white text-blue-600 shadow-xs border border-slate-200" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              📝 Resume Editor
+            </button>
+            <button
+              onClick={() => setActiveTab("ats")}
+              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "ats" ? "bg-white text-amber-600 shadow-xs border border-slate-200" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              ⚡ Live ATS Scanner
+              <span className="font-mono text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-bold">
+                {atsResult.score}/100
+              </span>
+            </button>
           </div>
 
-          <div className="rb-left-intro">
-            <h2>Craft Your Standout Resume</h2>
-            <p>Fill in your details across the sections below.</p>
-          </div>
+          {activeTab === "editor" ? (
+            <div className="space-y-4">
+              {/* Personal Info */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Personal Details</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <input
+                    placeholder="Full Name"
+                    value={resumeData.personalInfo.name}
+                    onChange={(e) => setResumeData((p) => ({ ...p, personalInfo: { ...p.personalInfo, name: e.target.value } }))}
+                    className="p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                  />
+                  <input
+                    placeholder="Professional Title"
+                    value={resumeData.personalInfo.title}
+                    onChange={(e) => setResumeData((p) => ({ ...p, personalInfo: { ...p.personalInfo, title: e.target.value } }))}
+                    className="p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                  />
+                  <input
+                    placeholder="Email"
+                    value={resumeData.personalInfo.email}
+                    onChange={(e) => setResumeData((p) => ({ ...p, personalInfo: { ...p.personalInfo, email: e.target.value } }))}
+                    className="p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                  />
+                  <input
+                    placeholder="Phone"
+                    value={resumeData.personalInfo.phone}
+                    onChange={(e) => setResumeData((p) => ({ ...p, personalInfo: { ...p.personalInfo, phone: e.target.value } }))}
+                    className="p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                  />
+                  <input
+                    placeholder="LinkedIn URL"
+                    value={resumeData.personalInfo.linkedIn}
+                    onChange={(e) => setResumeData((p) => ({ ...p, personalInfo: { ...p.personalInfo, linkedIn: e.target.value } }))}
+                    className="p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                  />
+                  <input
+                    placeholder="GitHub URL"
+                    value={resumeData.personalInfo.github}
+                    onChange={(e) => setResumeData((p) => ({ ...p, personalInfo: { ...p.personalInfo, github: e.target.value } }))}
+                    className="p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
 
-          {/* Sections in clean standard order */}
-          {activeTab === "all"
-            ? ALL_SECTIONS.map((sec) => renderSection(sec.id))
-            : renderSection(activeTab)}
+              {/* Summary */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Professional Summary</h2>
+                <textarea
+                  rows={3}
+                  value={resumeData.professionalSummary}
+                  onChange={(e) => setResumeData((p) => ({ ...p, professionalSummary: e.target.value }))}
+                  placeholder="Results-driven Software Engineer with expertise in React, Node.js..."
+                  className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500 resize-none"
+                />
+              </div>
 
-          <div className="rb-bottom-spacer" />
+              {/* Experience */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Experience</h2>
+                  <button onClick={handleAddExp} className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer">
+                    + Add Role
+                  </button>
+                </div>
+                {resumeData.experience.map((exp, idx) => (
+                  <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-slate-700">Role #{idx + 1}</span>
+                      <button onClick={() => handleRemoveExp(idx)} className="text-rose-500 text-[11px] cursor-pointer">Delete</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        placeholder="Company"
+                        value={exp.company}
+                        onChange={(e) => handleExpChange(idx, "company", e.target.value)}
+                        className="p-1.5 border border-slate-200 rounded bg-white outline-none"
+                      />
+                      <input
+                        placeholder="Job Title"
+                        value={exp.role}
+                        onChange={(e) => handleExpChange(idx, "role", e.target.value)}
+                        className="p-1.5 border border-slate-200 rounded bg-white outline-none"
+                      />
+                      <input
+                        placeholder="Dates (e.g. May 2024 - Present)"
+                        value={exp.dates}
+                        onChange={(e) => handleExpChange(idx, "dates", e.target.value)}
+                        className="col-span-2 p-1.5 border border-slate-200 rounded bg-white outline-none"
+                      />
+                    </div>
+                    <textarea
+                      rows={3}
+                      placeholder="• Bullet points with quantifiable achievements (XYZ formula)..."
+                      value={exp.description}
+                      onChange={(e) => handleExpChange(idx, "description", e.target.value)}
+                      className="w-full p-2 border border-slate-200 rounded bg-white outline-none resize-none"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Education */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Education</h2>
+                  <button onClick={handleAddEdu} className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer">
+                    + Add Education
+                  </button>
+                </div>
+                {resumeData.education.map((edu, idx) => (
+                  <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-slate-700">Education #{idx + 1}</span>
+                      <button onClick={() => handleRemoveEdu(idx)} className="text-rose-500 text-[11px] cursor-pointer">Delete</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        placeholder="Institution (e.g. IIT Kharagpur)"
+                        value={edu.institution}
+                        onChange={(e) => handleEduChange(idx, "institution", e.target.value)}
+                        className="col-span-2 p-1.5 border border-slate-200 rounded bg-white outline-none"
+                      />
+                      <input
+                        placeholder="Degree (e.g. B.Tech)"
+                        value={edu.degree}
+                        onChange={(e) => handleEduChange(idx, "degree", e.target.value)}
+                        className="p-1.5 border border-slate-200 rounded bg-white outline-none"
+                      />
+                      <input
+                        placeholder="Field of Study"
+                        value={edu.fieldOfStudy}
+                        onChange={(e) => handleEduChange(idx, "fieldOfStudy", e.target.value)}
+                        className="p-1.5 border border-slate-200 rounded bg-white outline-none"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Skills */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Technical Skills</h2>
+                <form onSubmit={handleAddSkill} className="flex gap-2">
+                  <input
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                    placeholder="Add skill (e.g. React.js, Express, Docker)..."
+                    className="flex-1 text-xs p-2 border border-slate-200 rounded-lg outline-none"
+                  />
+                  <button type="submit" className="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-lg font-semibold cursor-pointer">
+                    Add
+                  </button>
+                </form>
+                <div className="flex flex-wrap gap-1.5">
+                  {resumeData.skills.map((skill, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1.5 text-xs bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                      <span>{skill}</span>
+                      <button type="button" onClick={() => handleRemoveSkill(skill)} className="text-slate-400 hover:text-rose-600 font-bold">×</button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* ── Embedded In-Browser Web Worker ATS Panel ── */
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs space-y-4 text-xs">
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="font-bold text-slate-800 uppercase">Target Job Description</label>
+                  <span className="text-[10px] text-slate-500 font-mono">Web Worker: Non-Blocking (0 Tokens)</span>
+                </div>
+                <textarea
+                  rows={4}
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-amber-500 text-xs resize-none"
+                  placeholder="Paste target job description..."
+                />
+              </div>
+
+              {/* Score Header */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-amber-900">ATS Algorithmic Score</div>
+                  <div className="text-[11px] text-amber-800">50+ heuristic checks computed off-thread</div>
+                </div>
+                <div className="text-2xl font-black font-mono text-amber-700">
+                  {atsResult.score} <span className="text-xs font-normal">/ 100</span>
+                </div>
+              </div>
+
+              {/* 4 Scoring Breakdown Pillars */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                  <div className="text-slate-500">Keywords Match</div>
+                  <div className="font-bold text-slate-800">{atsResult.breakdown?.keywords?.score || 0} / 40 pts</div>
+                </div>
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                  <div className="text-slate-500">Quantifiable Metrics</div>
+                  <div className="font-bold text-slate-800">{atsResult.breakdown?.impact?.score || 0} / 25 pts</div>
+                </div>
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                  <div className="text-slate-500">Action Verbs</div>
+                  <div className="font-bold text-slate-800">{atsResult.breakdown?.verbs?.score || 0} / 20 pts</div>
+                </div>
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                  <div className="text-slate-500">Completeness</div>
+                  <div className="font-bold text-slate-800">{atsResult.breakdown?.completeness?.score || 0} / 15 pts</div>
+                </div>
+              </div>
+
+              {/* Keywords Match */}
+              <div>
+                <div className="font-bold text-slate-700 mb-1.5">Matched Keywords ({atsResult.matchedKeywords?.length || 0})</div>
+                <div className="flex flex-wrap gap-1 max-h-28 overflow-y-auto">
+                  {atsResult.matchedKeywords?.map((k, i) => (
+                    <span key={i} className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[11px]">
+                      ✓ {k.term}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Missing Keywords */}
+              <div>
+                <div className="font-bold text-slate-700 mb-1.5">Missing Target Keywords ({atsResult.missingKeywords?.length || 0})</div>
+                <div className="flex flex-wrap gap-1 max-h-28 overflow-y-auto">
+                  {atsResult.missingKeywords?.map((k, i) => (
+                    <span key={i} className="px-2 py-0.5 bg-rose-50 text-rose-800 border border-rose-200 rounded text-[11px]">
+                      + {k.term}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* High Impact Suggestions */}
+              {atsResult.suggestions?.length > 0 && (
+                <div>
+                  <div className="font-bold text-slate-700 mb-1">ATS Optimization Recommendations</div>
+                  <div className="space-y-1.5">
+                    {atsResult.suggestions.map((sug, i) => (
+                      <div key={i} className="p-2 bg-amber-50/60 border border-amber-200/60 rounded text-[11px] text-amber-900">
+                        <span className="font-semibold">{sug.title}: </span>
+                        <span>{sug.detail}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Right: Live preview */}
-        <div className="rb-right-col">
-          <ResumePreview data={resumeData} />
+        {/* Right Column: Live Printable A4 Resume Preview */}
+        <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-xs overflow-y-auto max-h-[85vh] print:max-h-none print:shadow-none print:border-none print:p-0">
+          <div id="printable-resume" className="space-y-5 text-slate-800 text-xs leading-relaxed">
+            {/* Header */}
+            <div className="border-b-2 border-blue-600 pb-3">
+              <h1 className="text-xl font-bold text-slate-900">{resumeData.personalInfo.name || "Your Name"}</h1>
+              <p className="text-xs font-semibold text-blue-600">{resumeData.personalInfo.title || "Software Engineer"}</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500 mt-1">
+                {resumeData.personalInfo.email && <span>{resumeData.personalInfo.email}</span>}
+                {resumeData.personalInfo.phone && <span>{resumeData.personalInfo.phone}</span>}
+                {resumeData.personalInfo.linkedIn && <span>{resumeData.personalInfo.linkedIn}</span>}
+                {resumeData.personalInfo.github && <span>{resumeData.personalInfo.github}</span>}
+              </div>
+            </div>
+
+            {/* Profile Summary */}
+            {resumeData.professionalSummary && (
+              <div>
+                <h2 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider border-b border-slate-200 pb-0.5 mb-1.5">
+                  Professional Summary
+                </h2>
+                <p className="text-slate-600">{resumeData.professionalSummary}</p>
+              </div>
+            )}
+
+            {/* Experience */}
+            {resumeData.experience.length > 0 && (
+              <div>
+                <h2 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider border-b border-slate-200 pb-0.5 mb-2">
+                  Experience
+                </h2>
+                <div className="space-y-3">
+                  {resumeData.experience.map((exp, idx) => (
+                    <div key={idx}>
+                      <div className="flex justify-between font-bold text-slate-800">
+                        <span>{exp.role} — <span className="text-slate-600 font-normal">{exp.company}</span></span>
+                        <span className="text-[11px] text-slate-400 font-normal">{exp.dates}</span>
+                      </div>
+                      <p className="text-slate-600 whitespace-pre-line mt-0.5">{exp.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Education */}
+            {resumeData.education.length > 0 && (
+              <div>
+                <h2 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider border-b border-slate-200 pb-0.5 mb-2">
+                  Education
+                </h2>
+                <div className="space-y-2">
+                  {resumeData.education.map((edu, idx) => (
+                    <div key={idx} className="flex justify-between">
+                      <div>
+                        <div className="font-bold text-slate-800">{edu.institution}</div>
+                        <div className="text-slate-600">{edu.degree} {edu.fieldOfStudy && `in ${edu.fieldOfStudy}`}</div>
+                      </div>
+                      <span className="text-[11px] text-slate-400">{edu.dates}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Skills */}
+            {resumeData.skills.length > 0 && (
+              <div>
+                <h2 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider border-b border-slate-200 pb-0.5 mb-1.5">
+                  Technical Skills
+                </h2>
+                <p className="text-slate-700">{resumeData.skills.join(" • ")}</p>
+              </div>
+            )}
+
+            {/* Custom Sections / Projects */}
+            {resumeData.customSections?.map((section, sIdx) => (
+              <div key={section.id || sIdx}>
+                <h2 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider border-b border-slate-200 pb-0.5 mb-2">
+                  {section.title || "Projects"}
+                </h2>
+                <div className="space-y-2.5">
+                  {section.items?.map((item, idx) => (
+                    <div key={item.id || idx}>
+                      <div className="flex justify-between font-bold text-slate-800">
+                        <span>
+                          {item.title}{" "}
+                          {item.subtitle && (
+                            <span className="text-slate-600 font-normal">
+                              ({item.subtitle})
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-normal">
+                          {item.dates || item.date}
+                        </span>
+                      </div>
+                      {item.description && (
+                        <p className="text-slate-600 mt-0.5 whitespace-pre-line">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </main>
-
-      {/* ATS Modal */}
-      <ATSScannerModal
-        isOpen={isAtsModalOpen}
-        onClose={() => setIsAtsModalOpen(false)}
-        resumeData={resumeData}
-      />
     </div>
   );
 };

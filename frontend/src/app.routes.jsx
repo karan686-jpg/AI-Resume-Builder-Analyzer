@@ -5,7 +5,7 @@ import Interview from "./features/interview/pages/interview";
 import Login from "./features/auth/pages/Login";
 import Register from "./features/auth/pages/Register";
 import Dashboard from "./features/auth/pages/Dashboard";
-import Protected from "./features/auth/components/Protected";
+import { Protected } from "./features/auth/auth.context";
 import ResumeBuilder from "./features/resume/pages/ResumeBuilder";
 
 export const router = createBrowserRouter([

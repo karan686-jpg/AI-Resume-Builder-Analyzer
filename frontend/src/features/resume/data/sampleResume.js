@@ -3,17 +3,14 @@
 
 export const SAMPLE_RESUME = {
   title: "Software Engineer Resume — Karan Datta",
-  themeColor: "#2563eb",
-  fontFamily: "'Inter', sans-serif",
-  alignment: "left",
-  spacing: "medium",
   personalInfo: {
     name: "Karan Datta",
     email: "karan.datta@example.com",
     phone: "+91 98765 43210",
     linkedIn: "linkedin.com/in/karandatta",
-    imageUrl: "",
+    github: "github.com/karandatta",
   },
+
   professionalSummary:
     "Results-driven Software Engineer with 2+ years of experience building scalable full-stack web applications. Proficient in React, Node.js, and MongoDB. Passionate about clean architecture, performance optimization, and AI-assisted tooling. Implemented JSON schema serialization allowing cross-platform backup, import/export of structured resume data, reducing user onboarding time by 60%.",
   experience: [

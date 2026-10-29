@@ -1,129 +1,90 @@
 const userModel = require("../models/user.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { asyncHandler } = require("../middleware");
 
+// Helper to sign JWT and set HTTP-only cookie
+const sendAuthResponse = (res, user, statusCode, message) => {
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    expiresIn: "1d",
+  });
+
+  res.cookie("token", token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  return res.status(statusCode).json({
+    message,
+    user: { id: user._id, username: user.username, email: user.email },
+    token,
+  });
+};
 
 // 1. REGISTER - Create a new user
-const registerController = async (req, res) => {
-    try {
-        const { username, email, password } = req.body;
+const registerController = asyncHandler(async (req, res) => {
+  const { username, email, password } = req.body || {};
 
-        // Check if user already exists
-        const existingUser = await userModel.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
-        }
+  if (!username || !email || !password) {
+    return res.status(400).json({ message: "Username, email, and password are required" });
+  }
 
-        // Hash the password (so it's not stored as plain text)
-        const hashedPassword = await bcrypt.hash(password, 10);
+  const existingUser = await userModel.findOne({
+    $or: [{ email }, { username }],
+  });
+  if (existingUser) {
+    const isEmailDup = existingUser.email === email;
+    return res.status(409).json({
+      message: isEmailDup ? "User with this email already exists" : "Username is already taken",
+    });
+  }
 
-        // Create and save the new user
-        const newUser = await userModel.create({
-            username,
-            email,
-            password: hashedPassword,
-        });
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const newUser = await userModel.create({
+    username,
+    email,
+    password: hashedPassword,
+  });
 
-        // Create a JWT token
-        const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
-            expiresIn: "1d",
-        });
-
-        // Send token in a cookie
-        res.cookie("token", token, { 
-            httpOnly: true,
-            sameSite: "lax",
-            secure: process.env.NODE_ENV === "production"
-        });
-
-        return res.status(201).json({ 
-            message: "User registered successfully", 
-            user: { id: newUser._id, username: newUser.username, email: newUser.email },
-            token 
-        });
-
-    } catch (error) {
-        return res.status(500).json({ message: "Something went wrong", error: error.message });
-    }
-};
-
+  return sendAuthResponse(res, newUser, 201, "User registered successfully");
+});
 
 // 2. LOGIN - Log in an existing user
-const loginUserConroller = async (req, res) => {
-    try {
-        const { email, password } = req.body;
+const loginUserController = asyncHandler(async (req, res) => {
+  const { email, password } = req.body || {};
 
-        // Find user by email
-        const user = await userModel.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ message: "Invalid email or password" });
-        }
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
+  }
 
-        // Compare the entered password with the hashed one
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: "Invalid email or password" });
-        }
+  const user = await userModel.findOne({ email });
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    return res.status(401).json({ message: "Invalid email or password" });
+  }
 
-        // Create a JWT token
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-            expiresIn: "1d",
-        });
-
-        // Send token in a cookie
-        res.cookie("token", token, { 
-            httpOnly: true,
-            sameSite: "lax",
-            secure: process.env.NODE_ENV === "production"
-        });
-
-        return res.status(200).json({ 
-            message: "Login successful", 
-            user: { id: user._id, username: user.username, email: user.email },
-            token 
-        });
-
-    } catch (error) {
-        return res.status(500).json({ message: "Something went wrong", error: error.message });
-    }
-};
-
+  return sendAuthResponse(res, user, 200, "Login successful");
+});
 
 // 3. LOGOUT - Log out the user
-const logoutUserConroller = async (req, res) => {
-    try {
-        // Clear the cookie from browser
-        res.clearCookie("token");
-
-        return res.status(200).json({ message: "Logged out successfully" });
-
-    } catch (error) {
-        return res.status(500).json({ message: "Something went wrong", error: error.message });
-    }
-};
-
+const logoutUserController = asyncHandler(async (req, res) => {
+  res.clearCookie("token");
+  return res.status(200).json({ message: "Logged out successfully" });
+});
 
 // 4. GET ME - Get the currently logged-in user's info
-const getMeController = async (req, res) => {
-    try {
-        // req.user is set by the auth middleware (it has the decoded token)
-        const user = await userModel.findById(req.user.id).select("-password");
-
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        return res.status(200).json({ user });
-
-    } catch (error) {
-        return res.status(500).json({ message: "Something went wrong", error: error.message });
-    }
-};
-
+const getMeController = asyncHandler(async (req, res) => {
+  const user = await userModel.findById(req.user.id).select("-password");
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  return res.status(200).json({ user });
+});
 
 module.exports = {
-    registerController,
-    loginUserConroller,
-    logoutUserConroller,
-    getMeController,
+  registerController,
+  loginUserController,
+  logoutUserController,
+  getMeController,
 };
+

@@ -1,13 +1,13 @@
 const express = require("express");
-const router = express.Router();
-const authMiddleware = require("../middleware/auth.middleware");
+const { authUser } = require("../middleware");
 const resumeController = require("../controllers/resume.controller");
 
-// All resume routes are protected by authMiddleware
-router.post("/", authMiddleware, resumeController.createResume);
-router.get("/", authMiddleware, resumeController.getAllUserResumes);
-router.get("/:id", authMiddleware, resumeController.getResumeById);
-router.put("/:id", authMiddleware, resumeController.updateResume);
-router.delete("/:id", authMiddleware, resumeController.deleteResume);
+const router = express.Router();
+
+router.post("/", authUser, resumeController.createResume);
+router.get("/", authUser, resumeController.getAllUserResumes);
+router.get("/:id", authUser, resumeController.getResumeById);
+router.put("/:id", authUser, resumeController.updateResume);
+router.delete("/:id", authUser, resumeController.deleteResume);
 
 module.exports = router;

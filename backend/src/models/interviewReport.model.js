@@ -52,6 +52,8 @@ const preparationPlanSchema = new mongoose.Schema({
     type: String,
     default: ""
   }
+}, {
+  _id: false
 });
 
 const interviewReportSchema = new mongoose.Schema({
@@ -62,13 +64,6 @@ const interviewReportSchema = new mongoose.Schema({
   resume: {
     type: String,
     default: ""
-  },
-  resumeFile: {
-    type: Buffer
-  },
-  resumeContentType: {
-    type: String,
-    default: "application/pdf"
   },
   selfDescription: {
     type: String,
@@ -89,11 +84,16 @@ const interviewReportSchema = new mongoose.Schema({
   preparationPlan: [preparationPlanSchema],
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
+    ref: "User",
+    required: true
   }
 }, {
   timestamps: true
 });
 
+// Index for rapid user-scoped report listing sorted by date
+interviewReportSchema.index({ user: 1, createdAt: -1 });
+
 const interviewReportModel = mongoose.model("InterviewReport", interviewReportSchema);
 module.exports = interviewReportModel;
+

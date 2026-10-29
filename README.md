@@ -9,13 +9,13 @@ An end-to-end full-stack platform featuring an in-browser zero-token ATS scoring
 ## 🌟 Core Architectural Highlights (Resume Highlights)
 
 * **⚡ In-Browser ATS Scoring Engine (Web Workers):**
-  Performs 50+ heuristic checks (target keyword matching, quantifiable metrics via Google XYZ formula, action verb strength, contact completeness) inside a dedicated **Web Worker**. Delivers instant scoring and actionable feedback without consuming LLM API tokens or blocking the main React UI thread.
+  Built an in-browser ATS scoring engine running in a **persistent Web Worker** with O(1) Set-based keyword extraction, Google XYZ quantifiable metrics detection, a 50+ action-verb lexicon, and contact completeness checks. Delivers live feedback with **zero API token cost** and zero main-thread blocking.
 
 * **🛡️ Express 5 AI Gateway with Resilience Patterns:**
-  Engineered a robust AI gateway with strict **JSON Schema validation**, **exponential jittered backoff**, and a **3-tier Gemini model fallback strategy** (`gemini-3.5-flash` → `gemini-3.7-flash` → `gemini-3.8-flash`) to ensure uninterrupted availability against API rate limits and model service outages.
+  Engineered an **Express 5 AI gateway** featuring **schema-constrained structured JSON output**, **exponential jittered backoff**, and a **3-tier Gemini fallback strategy** (`gemini-2.5-flash` → `gemini-2.0-flash` → `gemini-1.5-flash`) with intelligent error classification (retrying 429/503 while immediately failing fast on 4xx client errors) to ensure high availability.
 
 * **🎯 Automated Interview Preparation & Skill-Gap Analysis:**
-  Extracts text in-memory from uploaded PDF resumes using `pdf-parse` without saving unneeded files to disk. Generates customized technical & behavioral interview Q&A with model answers, comprehensive skill-gap analysis, and a structured 7-day preparation roadmap.
+  Developed an automated interview preparation pipeline using **Google Gemini** and in-memory **pdf-parse** (zero disk footprint). Generates customized technical & behavioral Q&A, skill-gap analysis, and a structured 7-day preparation roadmap. Enforces strict IDOR prevention via atomic owner-scoped queries (`{ _id, userId }`).
 
 ---
 
@@ -23,18 +23,18 @@ An end-to-end full-stack platform featuring an in-browser zero-token ATS scoring
 
 ### Frontend
 - **React 19 & Vite**
-- **Web Workers API** (Non-blocking background heuristic analysis)
+- **Web Workers API** (Dedicated non-blocking background thread)
 - **Tailwind CSS V4**
 - **React Router 7**
-- **Lucide React**
 
 ### Backend
 - **Node.js & Express 5**
 - **@google/genai SDK** (Structured JSON Output via `responseSchema`)
-- **MongoDB & Mongoose**
+- **MongoDB & Mongoose** (Compound indexes `{ userId: 1, updatedAt: -1 }`)
 - **Multer** (In-memory buffer upload)
-- **pdf-parse** (In-memory PDF text extraction)
+- **pdf-parse** (In-memory zero-disk PDF text extraction)
 - **JSON Web Tokens (JWT) & Bcrypt.js**
+
 
 ---
 

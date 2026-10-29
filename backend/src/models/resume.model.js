@@ -11,14 +11,6 @@ const resumeSchema = new mongoose.Schema({
     required: true,
     default: "Untitled Resume"
   },
-  themeColor: {
-    type: String,
-    default: "#2563eb"
-  },
-  activeTemplate: {
-    type: String,
-    default: "modern"
-  },
   personalInfo: {
     name: { type: String, default: "" },
     title: { type: String, default: "" },
@@ -26,8 +18,7 @@ const resumeSchema = new mongoose.Schema({
     phone: { type: String, default: "" },
     linkedIn: { type: String, default: "" },
     github: { type: String, default: "" },
-    portfolio: { type: String, default: "" },
-    imageUrl: { type: String, default: "" }
+    portfolio: { type: String, default: "" }
   },
   professionalSummary: {
     type: String,
@@ -64,6 +55,10 @@ const resumeSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Compound index for fast user-scoped resume lookups and sort by recent updates
+resumeSchema.index({ userId: 1, updatedAt: -1 });
+
 const Resume = mongoose.model("Resume", resumeSchema);
+
 
 module.exports = Resume;

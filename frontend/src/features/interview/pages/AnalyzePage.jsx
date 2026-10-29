@@ -1,230 +1,147 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useInterview } from "../hooks/useInterview.js";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router";
+import { useInterview } from "../interview.context";
 
-import { LoadingScreen } from "../../../components/ui/LoadingScreen";
-
-// Resume Analyzer: uploads resume + job description to generate interview plan
-const AnalyzePage = () => {
-  const { loading, generateReport, reports, getReports } = useInterview();
-
+export const AnalyzePage = () => {
+  const { generateReport, loading } = useInterview();
   const [jobDescription, setJobDescription] = useState("");
   const [selfDescription, setSelfDescription] = useState("");
   const [resumeFile, setResumeFile] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const resumeInputRef = useRef();
+  const fileInputRef = useRef();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    getReports();
-  }, [getReports]);
+  const handleGenerate = async () => {
+    setErrorMsg("");
+    const file = fileInputRef.current?.files?.[0];
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setResumeFile(e.target.files[0]);
-      setErrorMsg(""); // clear error on new file
+    if (!file && !selfDescription.trim()) {
+      setErrorMsg("Please upload a resume PDF or provide a self-description.");
+      return;
     }
-  };
+    if (!jobDescription.trim()) {
+      setErrorMsg("Please paste a target job description.");
+      return;
+    }
 
-  const handleGenerateReport = async () => {
     try {
-      setErrorMsg("");
-      const selectedFile = resumeInputRef.current?.files[0];
-
-      if (!selectedFile && !selfDescription.trim()) {
-        setErrorMsg(
-          "Please either upload a resume OR provide a self description!"
-        );
-        return;
-      }
-
-      if (!jobDescription.trim()) {
-        setErrorMsg("Please provide a Target Job Description!");
-        return;
-      }
-
       const data = await generateReport({
         jobDescription,
         selfDescription,
-        resumeFile: selectedFile,
+        resumeFile: file,
       });
-
-      navigate(`/interview/${data._id}`);
+      if (data?._id) {
+        navigate(`/interview/${data._id}`);
+      }
     } catch (err) {
-      setErrorMsg(
-        err.response?.data?.message ||
-          err.message ||
-          "Failed to generate report."
-      );
+      setErrorMsg(err.response?.data?.message || err.message || "Failed to generate report");
     }
   };
 
-  if (loading) {
-    return <LoadingScreen message="Generating your AI interview strategy & roadmap..." />;
-  }
+  const handleLoadSample = () => {
+    setJobDescription(
+      "Full Stack Developer proficient in React, Node.js, Express, MongoDB, and REST APIs. Experience with Docker, Redis, CI/CD pipelines, Git, and automated unit testing is a plus. Strong problem-solving and communication skills required."
+    );
+    setSelfDescription(
+      "Results-driven Full Stack Engineer with experience building performant web apps in React, Node.js, and Express. Built an in-browser ATS scoring engine using Web Workers and engineered an Express 5 AI gateway with JSON schema validation."
+    );
+    setErrorMsg("");
+  };
 
   return (
-    <div className="min-h-screen bg-[#09090e] text-white pb-16 font-sans relative overflow-x-hidden">
-      {/* Background glow accents */}
-      <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-pink-600/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* HERO */}
-      <header className="text-center pt-14 pb-8 px-4 max-w-4xl mx-auto relative z-10">
-        {/* Back button */}
-        <button
-          onClick={() => navigate("/")}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-slate-300 text-xs font-medium mb-6 transition-colors cursor-pointer"
-        >
-          ← Back to Home
-        </button>
-
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3 text-white">
-          Resume{" "}
-          <span className="bg-gradient-to-r from-indigo-400 via-pink-500 to-rose-500 bg-clip-text text-transparent">
-            Analyzer
-          </span>
-        </h1>
-        <p className="text-slate-400 max-w-xl mx-auto text-sm sm:text-base leading-relaxed font-light">
-          Upload your resume and paste the job description. Our AI generates
-          interview questions, skill gap analysis, and a study roadmap
-          instantly.
-        </p>
+    <div className="min-h-screen bg-slate-900 text-white p-6 font-sans">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+          <div>
+            <h1 className="text-xl font-bold">Resume Analyzer &amp; Interview Prep</h1>
+            <p className="text-xs text-slate-400">
+              Upload a resume PDF to run automated text extraction and generate custom Q&amp;A + 7-day roadmap.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="text-xs text-slate-400 hover:text-white px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer"
+          >
+            ← Workspace
+          </button>
+        </div>
 
         {errorMsg && (
-          <div className="bg-red-500/15 border border-red-500/40 text-red-300 px-5 py-2.5 rounded-xl mt-5 inline-block text-xs shadow-lg">
-            ⚠️ {errorMsg}
+          <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs rounded-xl mb-4">
+            {errorMsg}
           </div>
         )}
-      </header>
 
-      {/* MAIN CARD */}
-      <div className="max-w-4xl mx-auto my-6 px-4 relative z-10">
-        <div className="p-6 sm:p-8 bg-white/[0.03] border border-white/10 rounded-3xl backdrop-blur-xl shadow-2xl grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* LEFT PANEL */}
-          <div className="flex flex-col">
-            <h2 className="text-xs font-bold tracking-wider uppercase text-slate-300 mb-2">
+        {/* 1-Click Demo Fill */}
+        <div className="mb-4 flex justify-end">
+          <button
+            type="button"
+            onClick={handleLoadSample}
+            className="text-xs px-3 py-1.5 bg-purple-500/10 border border-purple-500/30 text-purple-300 rounded-lg hover:bg-purple-500/20 transition-colors cursor-pointer"
+          >
+            ⚡ Quick Fill Sample Profile &amp; Role
+          </button>
+        </div>
+
+        {/* Main Grid Inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {/* Target Job Description */}
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col">
+            <label className="text-xs font-bold text-slate-300 uppercase mb-2">
               Target Job Description
-            </h2>
+            </label>
             <textarea
-              placeholder="Paste job description..."
+              rows={8}
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
-              maxLength={5000}
-              className="w-full h-56 p-4 bg-black/40 border border-white/10 rounded-2xl text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none transition-all leading-relaxed"
+              placeholder="Paste job description requirements here..."
+              className="w-full flex-1 text-xs p-3 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 outline-none focus:border-purple-500 resize-none"
             />
-            <div className="text-right text-[11px] font-mono text-slate-500 mt-1.5">
-              {jobDescription.length} / 5000
-            </div>
           </div>
 
-          {/* RIGHT PANEL */}
-          <div className="flex flex-col">
-            <h2 className="text-xs font-bold tracking-wider uppercase text-slate-300 mb-2">
-              Your Profile
-            </h2>
-
-            {/* UPLOAD */}
-            <label className="block cursor-pointer">
-              <input
-                type="file"
-                hidden
-                ref={resumeInputRef}
-                accept=".pdf"
-                onChange={handleFileChange}
-              />
-              <div
-                className={`border-2 border-dashed rounded-2xl p-5 text-center transition-all flex flex-col items-center justify-center min-h-[110px] ${
-                  resumeFile
-                    ? "border-emerald-500/60 bg-emerald-500/10"
-                    : "border-white/15 bg-white/[0.02] hover:border-pink-500/50 hover:bg-white/[0.04]"
-                }`}
-              >
-                {resumeFile ? (
-                  <>
-                    <p className="text-sm font-bold text-emerald-400">{resumeFile.name}</p>
-                    <span className="text-[11px] text-slate-400 mt-1">Click to change file</span>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm font-semibold text-slate-200">Upload Resume</p>
-                    <span className="text-[11px] text-slate-400 mt-0.5">PDF Format (Max 5MB)</span>
-                  </>
-                )}
-              </div>
+          {/* Profile Input: Upload PDF or Self-Description */}
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col space-y-3">
+            <label className="text-xs font-bold text-slate-300 uppercase">
+              Candidate Resume
             </label>
 
-            <div className="flex items-center justify-center my-3 relative">
-              <div className="w-full h-[1px] bg-white/10" />
-              <span className="absolute px-3 text-[10px] font-bold text-slate-400 bg-[#09090e] border border-white/10 rounded-full uppercase">
-                OR
-              </span>
+            <div className="border border-dashed border-slate-600 rounded-lg p-4 text-center bg-slate-900/50">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".pdf"
+                onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                className="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-purple-600 file:text-white cursor-pointer"
+              />
+              {resumeFile && (
+                <p className="text-xs text-emerald-400 mt-2 font-medium">Selected: {resumeFile.name}</p>
+              )}
             </div>
 
-            {/* SELF DESCRIPTION */}
+            <div className="text-center text-[10px] text-slate-500 uppercase font-bold">OR</div>
+
             <textarea
-              placeholder="Write a short self description..."
+              rows={3}
               value={selfDescription}
               onChange={(e) => setSelfDescription(e.target.value)}
-              className="w-full h-28 p-3.5 bg-black/40 border border-white/10 rounded-2xl text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none transition-all leading-relaxed"
+              placeholder="Paste self-description or key technical projects..."
+              className="w-full text-xs p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 outline-none focus:border-purple-500 resize-none"
             />
           </div>
         </div>
+
+        {/* Submit */}
+        <div className="flex justify-center">
+          <button
+            onClick={handleGenerate}
+            disabled={loading}
+            className="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs rounded-xl shadow-md transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {loading ? "Generating AI Interview Strategy..." : "🎯 Generate Interview Plan"}
+          </button>
+        </div>
       </div>
-
-      {/* BUTTONS */}
-      <div className="flex justify-center px-4 relative z-10">
-        <button
-          className="px-8 py-3.5 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 active:scale-[0.98] text-white font-semibold text-sm rounded-2xl shadow-xl shadow-pink-500/25 transition-all cursor-pointer"
-          onClick={handleGenerateReport}
-        >
-          🎯 Generate Interview Strategy
-        </button>
-      </div>
-
-      {/* RECENT REPORTS */}
-      {reports.length > 0 && (
-        <section className="max-w-4xl mx-auto mt-12 px-4 relative z-10">
-          <h2 className="text-lg font-bold text-white mb-4 tracking-tight">Recent Reports</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {reports.map((report) => (
-              <div
-                key={report._id}
-                className="p-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 rounded-2xl transition-all cursor-pointer flex flex-col justify-between group"
-                onClick={() => navigate(`/interview/${report._id}`)}
-              >
-                <div>
-                  <h3 className="text-sm font-bold text-white group-hover:text-pink-400 transition-colors line-clamp-1">
-                    {report.title || "Untitled Role"}
-                  </h3>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    {new Date(report.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <span
-                    className={`text-xs font-mono font-bold px-2.5 py-1 rounded-lg border ${
-                      report.matchScore >= 80
-                        ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/25"
-                        : report.matchScore >= 60
-                        ? "text-amber-400 bg-amber-500/10 border-amber-500/25"
-                        : "text-rose-400 bg-rose-500/10 border-rose-500/25"
-                    }`}
-                  >
-                    {report.matchScore}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <footer className="flex justify-center gap-6 mt-16 text-xs text-slate-500 relative z-10">
-        <a href="#" className="hover:text-slate-300 transition-colors">Privacy</a>
-        <a href="#" className="hover:text-slate-300 transition-colors">Terms</a>
-        <a href="#" className="hover:text-slate-300 transition-colors">Help</a>
-      </footer>
     </div>
   );
 };

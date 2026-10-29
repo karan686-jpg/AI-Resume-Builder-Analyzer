@@ -1,26 +1,22 @@
 const Resume = require("../models/resume.model");
-const asyncHandler = require("../utils/asyncHandler");
+const { asyncHandler } = require("../middleware");
 
 // 1. Create or Save a new Resume
 const createResume = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const {
     title,
-    themeColor,
-    activeTemplate,
     personalInfo,
     professionalSummary,
     experience,
     education,
     skills,
     customSections,
-  } = req.body;
+  } = req.body || {};
 
   const savedResume = await Resume.create({
     userId,
     title: title || "Untitled Resume",
-    themeColor: themeColor || "#2563EB",
-    activeTemplate: activeTemplate || "modern",
     personalInfo: personalInfo || {},
     professionalSummary: professionalSummary || "",
     experience: experience || [],
@@ -30,83 +26,85 @@ const createResume = asyncHandler(async (req, res) => {
   });
 
   return res.status(201).json({
-    success: true,
     message: "Resume created successfully",
     resume: savedResume,
   });
 });
 
-// 2. Get all Resumes belonging to the logged-in user
+// 2. Get all Resumes belonging to the logged-in user (indexed query)
 const getAllUserResumes = asyncHandler(async (req, res) => {
-  const resumes = await Resume.find({ userId: req.user.id }).sort({ updatedAt: -1 });
+  const resumes = await Resume.find({ userId: req.user.id })
+    .select("title personalInfo updatedAt createdAt")
+    .sort({ updatedAt: -1 });
 
   return res.status(200).json({
-    success: true,
     count: resumes.length,
     resumes,
   });
 });
 
-// 3. Get a single Resume by ID (with ownership check)
+// 3. Get a single Resume by ID (atomic owner-scoped lookup)
 const getResumeById = asyncHandler(async (req, res) => {
-  const resume = await Resume.findById(req.params.id);
-
-  if (!resume) {
-    return res.status(404).json({ success: false, message: "Resume not found" });
-  }
-
-  if (resume.userId.toString() !== req.user.id) {
-    return res.status(403).json({ success: false, message: "Unauthorized: You do not own this resume" });
-  }
-
-  return res.status(200).json({ success: true, resume });
-});
-
-// 4. Update an existing Resume
-const updateResume = asyncHandler(async (req, res) => {
-  const resume = await Resume.findById(req.params.id);
-
-  if (!resume) {
-    return res.status(404).json({ success: false, message: "Resume not found" });
-  }
-
-  if (resume.userId.toString() !== req.user.id) {
-    return res.status(403).json({ success: false, message: "Unauthorized: You cannot edit this resume" });
-  }
-
-  const fields = [
-    "title", "themeColor", "activeTemplate", "personalInfo",
-    "professionalSummary", "experience", "education", "skills", "customSections"
-  ];
-  fields.forEach((field) => {
-    if (req.body[field] !== undefined) resume[field] = req.body[field];
+  const resume = await Resume.findOne({
+    _id: req.params.id,
+    userId: req.user.id,
   });
 
-  const updatedResume = await resume.save();
+  if (!resume) {
+    return res.status(404).json({ message: "Resume not found" });
+  }
+
+  return res.status(200).json({ resume });
+});
+
+// 4. Update an existing Resume (atomic owner-scoped update)
+const updateResume = asyncHandler(async (req, res) => {
+  const allowedFields = [
+    "title",
+    "personalInfo",
+    "professionalSummary",
+    "experience",
+    "education",
+    "skills",
+    "customSections",
+  ];
+
+  const updateData = {};
+  allowedFields.forEach((field) => {
+    if (req.body?.[field] !== undefined) {
+      updateData[field] = req.body[field];
+    }
+  });
+
+  const updatedResume = await Resume.findOneAndUpdate(
+    { _id: req.params.id, userId: req.user.id },
+    { $set: updateData },
+    { returnDocument: "after", runValidators: true }
+  );
+
+
+  if (!updatedResume) {
+    return res.status(404).json({ message: "Resume not found" });
+  }
 
   return res.status(200).json({
-    success: true,
     message: "Resume updated successfully",
     resume: updatedResume,
   });
 });
 
-// 5. Delete a Resume
+// 5. Delete a Resume (atomic owner-scoped deletion)
 const deleteResume = asyncHandler(async (req, res) => {
-  const resume = await Resume.findById(req.params.id);
+  const deletedResume = await Resume.findOneAndDelete({
+    _id: req.params.id,
+    userId: req.user.id,
+  });
 
-  if (!resume) {
-    return res.status(404).json({ success: false, message: "Resume not found" });
+  if (!deletedResume) {
+    return res.status(404).json({ message: "Resume not found" });
   }
-
-  if (resume.userId.toString() !== req.user.id) {
-    return res.status(403).json({ success: false, message: "Unauthorized: You cannot delete this resume" });
-  }
-
-  await Resume.findByIdAndDelete(req.params.id);
 
   return res.status(200).json({
-    success: true,
     message: "Resume deleted successfully",
   });
 });
@@ -118,3 +116,4 @@ module.exports = {
   updateResume,
   deleteResume,
 };
+
