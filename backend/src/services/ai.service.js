@@ -1,8 +1,18 @@
 const { GoogleGenAI } = require("@google/genai");
 
-const genAI = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY,
-});
+let genAI = null;
+function getGenAIClient() {
+  if (!genAI) {
+    const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      const err = new Error("Missing GOOGLE_GENAI_API_KEY environment variable.");
+      err.status = 500;
+      throw err;
+    }
+    genAI = new GoogleGenAI({ apiKey });
+  }
+  return genAI;
+}
 
 const interviewReportJsonSchema = {
   type: "object",
@@ -16,10 +26,10 @@ const interviewReportJsonSchema = {
         properties: {
           question: { type: "string" },
           intention: { type: "string" },
-          answer: { type: "string" }
+          answer: { type: "string" },
         },
-        required: ["question", "intention", "answer"]
-      }
+        required: ["question", "intention", "answer"],
+      },
     },
     behavioralQuestions: {
       type: "array",
@@ -28,10 +38,10 @@ const interviewReportJsonSchema = {
         properties: {
           question: { type: "string" },
           intention: { type: "string" },
-          answer: { type: "string" }
+          answer: { type: "string" },
         },
-        required: ["question", "intention", "answer"]
-      }
+        required: ["question", "intention", "answer"],
+      },
     },
     skillGaps: {
       type: "array",
@@ -40,10 +50,10 @@ const interviewReportJsonSchema = {
         properties: {
           skillName: { type: "string" },
           severity: { type: "string", enum: ["low", "medium", "high"] },
-          description: { type: "string" }
+          description: { type: "string" },
         },
-        required: ["skillName", "severity", "description"]
-      }
+        required: ["skillName", "severity", "description"],
+      },
     },
     preparationPlan: {
       type: "array",
@@ -53,11 +63,11 @@ const interviewReportJsonSchema = {
           day: { type: "integer" },
           title: { type: "string" },
           focus: { type: "string" },
-          tasks: { type: "array", items: { type: "string" } }
+          tasks: { type: "array", items: { type: "string" } },
         },
-        required: ["day", "title", "focus", "tasks"]
-      }
-    }
+        required: ["day", "title", "focus", "tasks"],
+      },
+    },
   },
   required: [
     "title",
@@ -65,65 +75,89 @@ const interviewReportJsonSchema = {
     "technicalQuestions",
     "behavioralQuestions",
     "skillGaps",
-    "preparationPlan"
-  ]
+    "preparationPlan",
+  ],
 };
 
-// 3-tier Production Gemini Fallback Strategy (matching resume bullet)
+// 3-tier Gemini fallback strategy against rate limits and service overloads
 const FALLBACK_MODELS = [
-  "gemini-2.5-flash", // Tier 1: Primary high-performance model
-  "gemini-2.0-flash", // Tier 2: Resilient high-availability fallback
-  "gemini-1.5-flash", // Tier 3: High-stability legacy fallback
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash",
 ];
 
 /**
- * Executes a Gemini generation request with 3-tier model cascading and exponential jittered backoff retry
- * on HTTP 429 (Rate Limit) and 503 (Overloaded) errors.
- * Immediately fails fast on 4xx client errors (400, 401, 403) to prevent useless fallback cascading.
+ * Gateway-level JSON Schema validator verifying structured AI output
+ * before returning to the client.
+ */
+function validateReportSchema(data) {
+  if (!data || typeof data !== "object") {
+    const err = new Error("Schema validation failed: report must be a JSON object.");
+    err.status = 502;
+    throw err;
+  }
+
+  for (const field of interviewReportJsonSchema.required) {
+    if (data[field] === undefined || data[field] === null) {
+      const err = new Error(`Schema validation failed: missing required field '${field}'.`);
+      err.status = 502;
+      throw err;
+    }
+  }
+
+  if (typeof data.title !== "string") {
+    const err = new Error("Schema validation failed: 'title' must be a string.");
+    err.status = 502;
+    throw err;
+  }
+  if (typeof data.matchScore !== "number" || data.matchScore < 0 || data.matchScore > 100) {
+    const err = new Error("Schema validation failed: 'matchScore' must be between 0 and 100.");
+    err.status = 502;
+    throw err;
+  }
+
+  const arrayFields = ["technicalQuestions", "behavioralQuestions", "skillGaps", "preparationPlan"];
+  for (const field of arrayFields) {
+    if (!Array.isArray(data[field])) {
+      const err = new Error(`Schema validation failed: '${field}' must be an array.`);
+      err.status = 502;
+      throw err;
+    }
+  }
+
+  return data;
+}
+
+/**
+ * Executes a Gemini request with 3-tier model cascading and exponential jittered backoff
+ * on 429 (Rate Limit) and 503 (Overloaded), while failing fast on 4xx client errors.
  */
 async function generateContentWithRetryAndFallback(options, maxRetries = 2) {
+  const client = getGenAIClient();
   let lastError = null;
 
   for (const model of FALLBACK_MODELS) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const response = await genAI.models.generateContent({
-          ...options,
-          model,
-        });
-        return response;
+        return await client.models.generateContent({ ...options, model });
       } catch (error) {
         lastError = error;
-        const status = error.status || (error.message?.includes("429") ? 429 : error.message?.includes("503") ? 503 : null);
-        const isRateLimit = status === 429;
-        const isOverloaded = status === 503;
+        const status =
+          error.status ||
+          (error.message?.includes("429") ? 429 : error.message?.includes("503") ? 503 : null);
+        const isRetryable = status === 429 || status === 503;
         const isNotFound = status === 404 || error.message?.toLowerCase().includes("not found");
-        const isClientError = status && status >= 400 && status < 500 && !isRateLimit && !isNotFound;
+        const isClientError = status && status >= 400 && status < 500 && !isRetryable && !isNotFound;
 
-        // Fail-fast on client errors: bad input, bad API key, or invalid params will never succeed on other models
-        if (isClientError) {
-          throw error;
-        }
+        if (isClientError) throw error;
+        if (isNotFound) break;
 
-        // Model not available on this tier: cascade to next model tier immediately
-        if (isNotFound) {
-          console.warn(`[GenAI] Tier model ${model} not available. Cascading to next fallback tier...`);
-          break;
-        }
-
-        // Rate limit or temporary service overload: retry with exponential jittered backoff
-        if ((isRateLimit || isOverloaded) && attempt < maxRetries) {
-          const baseDelay = 1000 * Math.pow(2, attempt - 1);
-          // 0-500ms random jitter prevents Thundering Herd Problem across concurrent users
-          const jitter = Math.floor(Math.random() * 500);
-          const waitMs = baseDelay + jitter;
-
-          console.warn(`[GenAI] ${model} hit status ${status || 'busy'}. Retrying attempt ${attempt}/${maxRetries} after ${waitMs}ms...`);
+        if (isRetryable && attempt < maxRetries) {
+          const waitMs = 1000 * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 500);
+          console.warn(`[GenAI] ${model} status ${status}. Retrying in ${waitMs}ms...`);
           await new Promise((res) => setTimeout(res, waitMs));
           continue;
         }
-
-        // Retries exhausted for this tier: cascade to next tier in FALLBACK_MODELS
         break;
       }
     }
@@ -132,32 +166,28 @@ async function generateContentWithRetryAndFallback(options, maxRetries = 2) {
   throw lastError;
 }
 
-
-async function generateInterviewReport({
-  jobDescription,
-  resume,
-  selfDescription,
-}) {
+async function generateInterviewReport({ jobDescription, resumeText, resume, selfDescription }) {
+  const candidateResume = resumeText || resume || "(No resume provided)";
   const prompt = `
-You are an expert career coach and technical interviewer.
-Analyze the following candidate inputs against the target job description:
+You are an expert technical interviewer and career strategist.
+Analyze the candidate profile against the target job description:
 
 1. Target Job Description:
 ${jobDescription}
 
 2. Candidate Resume:
-${resume || "(No resume provided)"}
+${candidateResume}
 
 3. Candidate Self-Description:
 ${selfDescription || "(No self-description provided)"}
 
 Generate a comprehensive interview preparation report:
-- title: Short, engaging title for this prep report
-- matchScore: Match percentage (0-100) between candidate profile and job requirements
-- technicalQuestions: 5-7 core technical interview questions with intention and model answer
-- behavioralQuestions: 5-7 behavioral questions (STAR format) with intention and model answer
-- skillGaps: Missing or weak skills with severity (low/medium/high) and clear explanation
-- preparationPlan: Structured 7-day preparation roadmap with actionable daily tasks
+- title: Short title for this prep report
+- matchScore: Match percentage (0-100)
+- technicalQuestions: 5-7 tailored technical interview questions with intention and model answer
+- behavioralQuestions: 5-7 STAR behavioral questions with intention and model answer
+- skillGaps: Missing or weak skills with severity (low/medium/high) and description
+- preparationPlan: Structured 7-day preparation roadmap (day 1-7) with title, focus, and daily tasks
 `;
 
   const response = await generateContentWithRetryAndFallback({
@@ -167,25 +197,25 @@ Generate a comprehensive interview preparation report:
       responseSchema: interviewReportJsonSchema,
     },
   });
-  let result = response.text;
 
-  // Clean markdown block wrapper if present
-  const jsonMatch = result.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (jsonMatch) {
-    result = jsonMatch[1];
-  }
+  let rawText = response.text || "";
+  const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (jsonMatch) rawText = jsonMatch[1];
 
   try {
-    return JSON.parse(result);
+    const parsed = JSON.parse(rawText);
+    return validateReportSchema(parsed);
   } catch (err) {
-    console.error("AI JSON Parse Error:", err);
-    const error = new Error("Failed to parse AI response into valid JSON.");
-    error.status = 502;
-    throw error;
+    if (err.status === 502) throw err;
+    const parseErr = new Error("Failed to parse AI response into valid JSON.");
+    parseErr.status = 502;
+    throw parseErr;
   }
 }
 
 module.exports = {
   generateInterviewReport,
   generateContentWithRetryAndFallback,
+  validateReportSchema,
+  interviewReportJsonSchema,
 };

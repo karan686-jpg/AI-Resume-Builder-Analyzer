@@ -1,74 +1,16 @@
 @import "tailwindcss";
 
-#root {
-  min-height: 100vh;
-  background-color: #09090e;
-  color: #f8fafc;
-}
-
-/* 
-  Custom styles for smooth scrolling and scrollbar 
-*/
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
-  border-radius: 20px;
-}
-
-/* Fix text color in inputs and textareas globally to prevent white-on-white issues */
-.rb-page input, .rb-page textarea {
-  color: #1f2937 !important;
-}
-
-/* 
-  Print Media Queries for PDF Export 
-  This ensures only the actual Resume preview is saved.
-*/
 @media print {
   body {
-    background-color: white !important;
+    background: white !important;
     margin: 0;
     padding: 0;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  /* Hide the top header */
-  header {
-    display: none !important;
-  }
-
-  /* Make the main Grid become a normal block without padding */
-  main {
-    display: block !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  /* Hide the left column (Forms) */
-  main > div:first-child {
-    display: none !important;
-  }
-
-  /* Expand the right column to fill the page, removing sticky behaviour */
-  main > div:last-child {
-    display: block !important;
-    position: static !important;
-    height: auto !important;
-    overflow: visible !important;
-    border: none !important;
-    background: transparent !important;
-    padding: 0 !important;
-  }
-
-  /* Ensure the A4 page layout naturally fills the print document */
   @page {
     size: A4;
-    margin: 0;
+    margin: 0.5in;
   }
 }
