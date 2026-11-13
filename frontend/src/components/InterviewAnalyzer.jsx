@@ -60,7 +60,7 @@ export default function InterviewAnalyzer() {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         throw new Error(data.message || "Failed to generate interview plan");
@@ -136,9 +136,21 @@ export default function InterviewAnalyzer() {
                 className="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-purple-600 file:text-white cursor-pointer"
               />
               {resumeFile && (
-                <p className="text-xs text-emerald-400 mt-2 font-medium">
-                  Selected PDF: {resumeFile.name}
-                </p>
+                <div className="flex items-center justify-center gap-2 mt-2 text-xs">
+                  <span className="text-emerald-400 font-medium">
+                    Selected PDF: {resumeFile.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResumeFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="text-rose-400 hover:underline cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
               )}
             </div>
 

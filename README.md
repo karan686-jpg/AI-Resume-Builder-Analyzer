@@ -5,7 +5,7 @@
 A lean, interview-focused implementation built strictly around the three core engineering pillars:
 
 1. **In-Browser ATS Scoring Engine (Web Workers):** Runs 50+ heuristic checks (O(1) Set keyword matching, Google XYZ metrics regex, 56 action verbs, and structural completeness) in a dedicated background `Worker` thread with **0 LLM token usage** and zero main-thread blocking.
-2. **Resilient Express 5 AI Gateway:** Stateless `POST /api/analyze` endpoint featuring Gemini `responseSchema` constrained decoding + gateway JSON Schema validation, exponential jittered backoff on `429`/`503`, fail-fast on `4xx` client errors, and a 3-tier model fallback cascade (`gemini-2.5-flash` → `gemini-2.5-flash-lite` → `gemini-2.0-flash`).
+2. **Resilient Express 5 AI Gateway:** Stateless `POST /api/analyze` endpoint featuring Gemini `responseSchema` constrained decoding + gateway JSON Schema validation, exponential jittered backoff on `429`/`503`, fail-fast on `4xx` client errors, and a 3-tier model fallback cascade (`gemini-3.5-flash` → `gemini-3.5-flash-lite` → `gemini-3.1-flash-lite`).
 3. **Automated PDF Extraction & Interview Prep:** Extracts resume PDF text in-memory via `multer.memoryStorage()` + `pdf-parse` (zero disk footprint) and generates tailored technical/behavioral Q&A, skill-gap analysis, and a 7-day preparation roadmap.
 
 ## Quick Start

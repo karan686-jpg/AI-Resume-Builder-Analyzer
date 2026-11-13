@@ -61,6 +61,19 @@ app.use((err, _req, res, _next) => {
   let statusCode = err.statusCode || err.status || 500;
   let message = err.message || "Internal Server Error";
 
+  // Extract clean message when @google/genai throws a JSON-serialized error string
+  if (typeof message === "string" && message.trim().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(message);
+      if (parsed?.error?.message) {
+        message = parsed.error.message;
+        statusCode = parsed.error.code || statusCode;
+      }
+    } catch {
+      // Keep original message if not valid JSON
+    }
+  }
+
   if (err.code === "LIMIT_FILE_SIZE") {
     statusCode = 400;
     message = "File size exceeds 5MB limit. Please upload a smaller PDF.";

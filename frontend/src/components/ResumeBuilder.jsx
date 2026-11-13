@@ -7,7 +7,13 @@ const STORAGE_KEY = "resume_builder_data";
 const loadInitialResume = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : SAMPLE_RESUME;
+    if (!saved) return SAMPLE_RESUME;
+    const parsed = JSON.parse(saved);
+    return {
+      ...SAMPLE_RESUME,
+      ...parsed,
+      personalInfo: { ...SAMPLE_RESUME.personalInfo, ...(parsed.personalInfo || {}) },
+    };
   } catch {
     return SAMPLE_RESUME;
   }
